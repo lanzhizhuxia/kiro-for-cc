@@ -30,9 +30,19 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
             // Root level - show CLAUDE.md files directly
             const items: SteeringItem[] = [];
 
-            // Global CLAUDE.md
+            // Check existence of files
             const globalClaudeMd = path.join(process.env.HOME || '', '.claude', 'CLAUDE.md');
-            if (fs.existsSync(globalClaudeMd)) {
+            const globalExists = fs.existsSync(globalClaudeMd);
+
+            let projectClaudeMd = '';
+            let projectExists = false;
+            if (vscode.workspace.workspaceFolders) {
+                projectClaudeMd = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'CLAUDE.md');
+                projectExists = fs.existsSync(projectClaudeMd);
+            }
+
+            // Always show Global Rule and Project Rule (if they exist)
+            if (globalExists) {
                 items.push(new SteeringItem(
                     'Global Rule',
                     vscode.TreeItemCollapsibleState.None,
@@ -45,49 +55,21 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
                         arguments: [vscode.Uri.file(globalClaudeMd)]
                     }
                 ));
-            } else {
-                items.push(new SteeringItem(
-                    'Global Rule (not found)',
-                    vscode.TreeItemCollapsibleState.None,
-                    'claude-md-missing',
-                    '',
-                    this.context,
-                    {
-                        command: 'kiro.steering.createGlobalClaude',
-                        title: 'Create Global CLAUDE.md'
-                    }
-                ));
             }
 
-            // Project CLAUDE.md
-            if (vscode.workspace.workspaceFolders) {
-                const projectClaudeMd = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'CLAUDE.md');
-                if (fs.existsSync(projectClaudeMd)) {
-                    items.push(new SteeringItem(
-                        'Project Rule',
-                        vscode.TreeItemCollapsibleState.None,
-                        'claude-md-project',
-                        projectClaudeMd,
-                        this.context,
-                        {
-                            command: 'vscode.open',
-                            title: 'Open Project CLAUDE.md',
-                            arguments: [vscode.Uri.file(projectClaudeMd)]
-                        }
-                    ));
-                } else {
-                    items.push(new SteeringItem(
-                        'Project Rule (not found)',
-                        vscode.TreeItemCollapsibleState.None,
-                        'claude-md-missing',
-                        '',
-                        this.context,
-                        {
-                            command: 'kiro.steering.createProjectClaude',
-                            title: 'Create Project CLAUDE.md'
-                        }
-                    ));
-                }
+            if (projectExists) {
+                items.push(new SteeringItem(
+                    'Project Rule',
+                    vscode.TreeItemCollapsibleState.None,
+                    'claude-md-project',
+                    projectClaudeMd,
+                    this.context,
+                    {
+                        command: 'vscode.open',
+                        title: 'Open Project CLAUDE.md',
+                        arguments: [vscode.Uri.file(projectClaudeMd)]
+                    }
+                ));
             }
 
             // Traditional steering documents - add them directly at root level if they exist
@@ -105,15 +87,44 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
                 }
             }
 
+            // Add create buttons at the bottom for missing files
+            if (!globalExists) {
+                items.push(new SteeringItem(
+                    'Create Global Rule',
+                    vscode.TreeItemCollapsibleState.None,
+                    'create-global-claude',
+                    '',
+                    this.context,
+                    {
+                        command: 'kfc.steering.createGlobalClaude',
+                        title: 'Create Global CLAUDE.md'
+                    }
+                ));
+            }
+
+            if (vscode.workspace.workspaceFolders && !projectExists) {
+                items.push(new SteeringItem(
+                    'Create Project Rule',
+                    vscode.TreeItemCollapsibleState.None,
+                    'create-project-claude',
+                    '',
+                    this.context,
+                    {
+                        command: 'kfc.steering.createProjectClaude',
+                        title: 'Create Project CLAUDE.md'
+                    }
+                ));
+            }
+
             return items;
         } else if (element.contextValue === 'steering-header') {
             // Return steering documents as children of the header
             const items: SteeringItem[] = [];
-            
+
             if (vscode.workspace.workspaceFolders && this.steeringManager) {
                 const steeringDocs = await this.steeringManager.getSteeringDocuments();
                 const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-                
+
                 for (const doc of steeringDocs) {
                     // Calculate relative path from workspace root
                     const relativePath = path.relative(workspacePath, doc.path);
@@ -132,7 +143,7 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
                     ));
                 }
             }
-            
+
             return items;
         }
 
@@ -161,9 +172,12 @@ class SteeringItem extends vscode.TreeItem {
             this.iconPath = new vscode.ThemeIcon('root-folder');
             this.tooltip = `Project CLAUDE.md: ${resourcePath}`;
             this.description = 'CLAUDE.md';
-        } else if (contextValue === 'claude-md-missing') {
-            this.iconPath = new vscode.ThemeIcon('add');
-            this.tooltip = 'Click to create';
+        } else if (contextValue === 'create-global-claude') {
+            this.iconPath = new vscode.ThemeIcon('globe');
+            this.tooltip = 'Click to create Global CLAUDE.md';
+        } else if (contextValue === 'create-project-claude') {
+            this.iconPath = new vscode.ThemeIcon('root-folder');
+            this.tooltip = 'Click to create Project CLAUDE.md';
         } else if (contextValue === 'separator') {
             this.iconPath = undefined;
             this.description = undefined;

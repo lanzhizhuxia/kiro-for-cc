@@ -76,7 +76,7 @@
       },
       {
         "view": "kfc.views.steeringExplorer",
-        "contents": "No steering configuration found.\n\n[$(root-folder) Create Project CLAUDE.md](command:kfc.steering.createProjectClaude)"
+        "contents": "[$(globe) Create Global CLAUDE.md](command:kfc.steering.createGlobalClaude)\n\n[$(root-folder) Create Project CLAUDE.md](command:kfc.steering.createProjectClaude)"
       },
       {
         "view": "kfc.views.mcpServerStatus",

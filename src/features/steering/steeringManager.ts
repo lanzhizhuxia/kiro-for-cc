@@ -159,34 +159,43 @@ After refining, overwrite the original file with the improved content.`;
      */
     async createClaudeMd(level: 'global' | 'project') {
         const isGlobal = level === 'global';
-        let filePath: string;
+        
+        if (!isGlobal) {
+            // For project CLAUDE.md, run claude after venv activation completes
+            const terminal = vscode.window.createTerminal({
+                name: 'Claude Code - Init',
+                cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+                location: {
+                    viewColumn: vscode.ViewColumn.Two
+                }
+            });
+            terminal.show();
+            
+            // Wait for Python extension to finish venv activation
+            const delay = this.configManager.getTerminalDelay();
+            setTimeout(() => {
+                terminal.sendText('claude "/init"');
+            }, delay);
+            
+            return;
+        }
 
-        if (isGlobal) {
-            // Global CLAUDE.md in ~/.claude/
-            const claudeDir = path.join(process.env.HOME || '', '.claude');
-            filePath = path.join(claudeDir, 'CLAUDE.md');
+        // Global CLAUDE.md in ~/.claude/
+        const claudeDir = path.join(process.env.HOME || '', '.claude');
+        const filePath = path.join(claudeDir, 'CLAUDE.md');
 
-            // Ensure directory exists
-            try {
-                await vscode.workspace.fs.createDirectory(vscode.Uri.file(claudeDir));
-            } catch (error) {
-                // Directory might already exist
-            }
-        } else {
-            // Project CLAUDE.md in workspace root
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('No workspace folder open');
-                return;
-            }
-            filePath = path.join(workspaceFolder.uri.fsPath, 'CLAUDE.md');
+        // Ensure directory exists
+        try {
+            await vscode.workspace.fs.createDirectory(vscode.Uri.file(claudeDir));
+        } catch (error) {
+            // Directory might already exist
         }
 
         // Check if file already exists
         try {
             await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
             const overwrite = await vscode.window.showWarningMessage(
-                `${isGlobal ? 'Global' : 'Project'} CLAUDE.md already exists. Overwrite?`,
+                'Global CLAUDE.md already exists. Overwrite?',
                 'Overwrite',
                 'Cancel'
             );
@@ -197,51 +206,8 @@ After refining, overwrite the original file with the improved content.`;
             // File doesn't exist, continue
         }
 
-        // Create initial content
-        const initialContent = isGlobal ?
-            `# Global Claude Instructions
-
-These instructions apply to all projects when using Claude Code.
-
-## General Guidelines
-
-- Always follow best practices for the language/framework being used
-- Write clear, maintainable code with appropriate comments
-- Consider security implications of any changes
-- Test thoroughly before committing
-
-## Personal Preferences
-
-[Add your personal coding preferences here]
-
-## Common Patterns
-
-[Add patterns you want Claude to follow across all projects]
-` :
-            `# Project-Specific Claude Instructions
-
-These instructions apply only to this project.
-
-## Project Overview
-
-[Describe your project's purpose and main features]
-
-## Code Style & Conventions
-
-[List project-specific coding conventions]
-
-## Architecture Decisions
-
-[Document key architectural patterns and decisions]
-
-## Development Workflow
-
-[Describe build, test, and deployment processes]
-
-## Important Notes
-
-[Add any crucial information Claude should know about this project]
-`;
+        // Create empty file for global CLAUDE.md
+        const initialContent = '';
 
         // Write the file
         await vscode.workspace.fs.writeFile(
@@ -254,7 +220,7 @@ These instructions apply only to this project.
         await vscode.window.showTextDocument(document);
 
         vscode.window.showInformationMessage(
-            `Created ${isGlobal ? 'global' : 'project'} CLAUDE.md file`
+            'Created global CLAUDE.md file'
         );
     }
 

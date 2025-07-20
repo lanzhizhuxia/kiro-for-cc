@@ -21,6 +21,9 @@ export class ConfigManager {
     private static instance: ConfigManager;
     private settings: KfcSettings | null = null;
     private workspaceFolder: vscode.WorkspaceFolder | undefined;
+    
+    // Internal constants
+    private static readonly TERMINAL_VENV_ACTIVATION_DELAY = 800; // ms
 
     private constructor() {
         this.workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -74,6 +77,10 @@ export class ConfigManager {
             throw new Error('No workspace folder found');
         }
         return path.join(this.workspaceFolder.uri.fsPath, this.getPath(type));
+    }
+
+    getTerminalDelay(): number {
+        return ConfigManager.TERMINAL_VENV_ACTIVATION_DELAY;
     }
 
     private getDefaultSettings(): KfcSettings {

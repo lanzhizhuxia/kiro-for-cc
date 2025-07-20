@@ -142,11 +142,12 @@ ${prompt}`;
             terminal.show();
 
             // Send the command directly without echo messages
+            const delay = this.configManager.getTerminalDelay();
             setTimeout(() => {
                 this.outputChannel.appendLine(`Sending command to terminal: ${command}`);
                 terminal.sendText(command, true); // true = add newline to execute
                 this.outputChannel.appendLine('Command sent to terminal!');
-            }, 500); // 500ms delay to allow venv activation
+            }, delay); // Configurable delay to allow venv activation
 
             // Clean up temp files after a delay
             setTimeout(async () => {
