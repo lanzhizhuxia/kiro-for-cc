@@ -115,12 +115,6 @@
         "icon": "$(sparkle)"
       },
       {
-        "command": "kfc.claude.openChat",
-        "title": "Open Claude Code",
-        "category": "Kiro",
-        "icon": "$(comment-discussion)"
-      },
-      {
         "command": "kfc.spec.implementTask",
         "title": "Implement Task",
         "category": "Kiro",
@@ -248,9 +242,6 @@
         {
           "command": "kfc.steering.create",
           "when": "workspaceFolderCount > 0"
-        },
-        {
-          "command": "kfc.claude.openChat"
         }
       ]
     },

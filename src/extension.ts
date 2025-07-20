@@ -262,40 +262,6 @@ If a project CLAUDE.md exists and contains a "## Steering Documents" section, pl
 
     // Claude Code integration commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('kfc.claude.openChat', async () => {
-            // Open Claude Code in chat mode with context
-            const terminal = vscode.window.createTerminal('Claude Code');
-
-            // Get current workspace path
-            const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (workspacePath) {
-                terminal.sendText(`cd "${workspacePath}"`);
-            }
-
-            // Check if there are steering documents to provide as context
-            const steeringDocs = await steeringManager.getSteeringDocuments();
-            if (steeringDocs.length > 0) {
-                vscode.window.showInformationMessage(
-                    `Found ${steeringDocs.length} steering document(s). Claude Code will have access to them.`
-                );
-            }
-
-            terminal.sendText('claude你麻痹');
-            terminal.show();
-        }),
-
-        vscode.commands.registerCommand('kfc.claude.askAboutFile', async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                vscode.window.showErrorMessage('No active file');
-                return;
-            }
-
-            const fileName = editor.document.fileName;
-            const terminal = vscode.window.createTerminal('Claude Code');
-            terminal.sendText(`claude -p "Explain the code in ${fileName}"`);
-            terminal.show();
-        }),
 
         vscode.commands.registerCommand('kfc.claude.implementTask', async (taskText: string) => {
             // Get all steering documents for context
@@ -363,40 +329,8 @@ If a project CLAUDE.md exists and contains a "## Steering Documents" section, pl
                 await vscode.workspace.fs.stat(settingsFile);
             } catch (error) {
                 // File doesn't exist, create it with default settings
-                const defaultSettings = {
-                    "// Kiro for Claude Code Settings": "",
-                    "// Edit this file to configure Kiro": "",
-                    "": "",
-                    "// Directory paths (relative to workspace root)": "",
-                    "paths": {
-                        "specs": ".claude/specs",
-                        "// specs.description": "Directory for spec files",
-                        "steering": ".claude/steering",
-                        "// steering.description": "Directory for steering documents",
-                        "settings": ".claude/settings",
-                        "// settings.description": "Directory for Kiro settings"
-                    },
-                    "": "",
-                    "// Show/hide views in the sidebar": "",
-                    "views": {
-                        "specs": {
-                            "visible": true,
-                            "// description": "Show Specs view for structured development"
-                        },
-                        "hooks": {
-                            "visible": true,
-                            "// description": "Show Agent Hooks view"
-                        },
-                        "steering": {
-                            "visible": true,
-                            "// description": "Show Agent Steering view"
-                        },
-                        "mcp": {
-                            "visible": true,
-                            "// description": "Show MCP Servers view"
-                        }
-                    }
-                };
+                const configManager = ConfigManager.getInstance();
+                const defaultSettings = configManager.getSettings();
 
                 await vscode.workspace.fs.writeFile(
                     settingsFile,
