@@ -64,13 +64,17 @@ cursor --install-extension heisebaiyun.kiro-for-cc
 
 ### 从 VSIX 文件安装
 
+从 [GitHub Releases](https://github.com/notdp/kiro-for-cc/releases/latest) 下载最新的 `.vsix` 文件，然后：
+
 ```bash
 # VSCode
-code --install-extension kiro-for-cc-0.1.0.vsix
+code --install-extension kiro-for-cc-{latest-version}.vsix
 
 # Cursor
-cursor --install-extension kiro-for-cc-0.1.0.vsix
+cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ```
+
+将 `{latest-version}` 替换为实际版本号，例如 `0.1.5`。
 
 ### 前置条件
 
@@ -213,7 +217,7 @@ npm run watch
 # 构建 VSIX 包
 npm run package
 
-# 输出：kiro-for-cc-0.1.0.vsix
+# 输出：kiro-for-cc-{latest-version}.vsix
 ```
 
 ### 项目代码结构

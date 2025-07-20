@@ -66,13 +66,17 @@ cursor --install-extension heisebaiyun.kiro-for-cc
 
 ### From VSIX file
 
+Download the latest `.vsix` file from [GitHub Releases](https://github.com/notdp/kiro-for-cc/releases/latest), then:
+
 ```bash
 # VSCode
-code --install-extension kiro-for-cc-0.1.0.vsix
+code --install-extension kiro-for-cc-{latest-version}.vsix
 
 # Cursor
-cursor --install-extension kiro-for-cc-0.1.0.vsix
+cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ```
+
+Replace `{latest-version}` with the actual version number, e.g., `0.1.5`.
 
 ### Prerequisites
 
@@ -215,7 +219,7 @@ npm run watch
 # Build VSIX package
 npm run package
 
-# Output: kiro-for-cc-0.1.0.vsix
+# Output: kiro-for-cc-{latest-version}.vsix
 ```
 
 ### Project Structure
