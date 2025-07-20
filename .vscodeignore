@@ -14,5 +14,4 @@ node_modules/**
 README.md
 .DS_Store
 *.vsix
-kiro-extension/**
-kiro-claude-adapter/**image.png
+image.png
