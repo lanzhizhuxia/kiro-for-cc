@@ -47,6 +47,26 @@ export class ClaudeCodeProvider {
     }
 
     /**
+     * Convert Windows path to WSL path if needed
+     * Example: C:\Users\username\file.txt -> /mnt/c/Users/username/file.txt
+     */
+    private convertToWSLPath(filePath: string): string {
+        // Check if running on Windows and path is a Windows path
+        if (process.platform === 'win32' && filePath.match(/^[A-Za-z]:\\/)) {
+            // Replace backslashes with forward slashes
+            let wslPath = filePath.replace(/\\/g, '/');
+            
+            // Convert drive letter to WSL format (C: -> /mnt/c)
+            wslPath = wslPath.replace(/^([A-Za-z]):/, (_match, drive) => `/mnt/${drive.toLowerCase()}`);
+            
+            return wslPath;
+        }
+        
+        // Return original path if not on Windows or not a Windows path
+        return filePath;
+    }
+
+    /**
      * Send a message to Claude Code using terminal
      */
     private async sendToClaudeCode(prompt: string, options?: {
@@ -58,7 +78,6 @@ export class ClaudeCodeProvider {
         this.outputChannel.appendLine(`Prompt length: ${prompt.length}`);
         this.outputChannel.appendLine(`Has system prompt: ${!!options?.systemPrompt}`);
         this.outputChannel.appendLine(`Terminal name: ${options?.terminalName || 'default'}`);
-        this.outputChannel.show(); // 确保 Output 面板可见
 
         try {
             this.outputChannel.appendLine('Creating prompt file...');
@@ -93,8 +112,14 @@ ${prompt}`;
             const promptFile = await this.createTempFile(fullPrompt, 'prompt');
             this.outputChannel.appendLine(`Created prompt file: ${promptFile}`);
 
+            // Convert to WSL path if running on Windows with WSL terminal
+            const terminalPath = this.convertToWSLPath(promptFile);
+            if (terminalPath !== promptFile) {
+                this.outputChannel.appendLine(`Converted Windows path to WSL format: ${terminalPath}`);
+            }
+
             // Build the command - simple now, just claude with input redirection
-            let command = `${this.claudePath} < "${promptFile}"`;
+            let command = `${this.claudePath} < "${terminalPath}"`;
 
             this.outputChannel.appendLine(`Final command: ${command}`);
 

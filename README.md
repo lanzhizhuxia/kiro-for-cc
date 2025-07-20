@@ -76,7 +76,31 @@ cursor --install-extension kiro-for-cc-0.1.0.vsix
 
 ### Prerequisites
 
-Ensure Claude Code is installed and configured
+1. **Claude Code Installation**: Ensure Claude Code is installed and configured
+
+2. **Platform Compatibility**: 
+   
+   **macOS & Linux**: ✅ Fully supported without any additional configuration
+   
+   **Windows**: Special requirements due to technical limitations
+   
+   Due to Claude Code's interactive terminal interface requirements, pipe/redirect operations are not supported in native Windows terminals (CMD, PowerShell, Git Bash).
+   
+   **Supported Environments:**
+   - ✅ **macOS/Linux**: All terminals work perfectly
+   - ✅ **WSL VSCode + WSL Terminal**: Full native Linux environment
+   - ✅ **Windows VSCode + WSL Terminal**: Automatic path conversion supported
+   - ❌ **Windows Native Terminals**: Not supported (CMD, PowerShell, Git Bash)
+   
+   **Technical Background:**
+   - Claude Code requires a TTY (terminal) environment for its interactive interface
+   - Windows terminals break the TTY connection when using pipes (`|`) or redirects (`<`)
+   - This limitation affects all Windows terminals including Git Bash (MinTTY)
+   
+   **Recommendation for Windows Users:**
+   - Install WSL2 (Windows Subsystem for Linux)
+   - **Best Practice**: Launch VSCode from within WSL (`code .` in WSL terminal)
+   - **Alternative**: Use WSL terminal within Windows VSCode (extension handles path conversion automatically)
 
 ## Usage
 

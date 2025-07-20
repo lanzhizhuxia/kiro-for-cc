@@ -184,11 +184,6 @@ This document has not been created yet.`;
                 preview: false,
                 viewColumn: vscode.ViewColumn.Active
             });
-
-            // Show info message
-            vscode.window.showInformationMessage(
-                `The ${type} document for '${specName}' has not been created yet.`
-            );
         }
     }
 

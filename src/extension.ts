@@ -19,7 +19,6 @@ export let outputChannel: vscode.OutputChannel;
 export async function activate(context: vscode.ExtensionContext) {
     // Create output channel for debugging
     outputChannel = vscode.window.createOutputChannel('Kiro for Claude Code');
-    outputChannel.show();
 
     // 检查工作区状态
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -196,7 +195,7 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
         vscode.commands.registerCommand('kfc.spec.navigate.tasks', async (specName: string) => {
             await specManager.navigateToDocument(specName, 'tasks');
         }),
-        
+
         vscode.commands.registerCommand('kfc.spec.implementTask', async () => {
             // Coming soon - show a friendly message instead of error
             vscode.window.showInformationMessage('Task implementation feature coming soon!', 'OK');
