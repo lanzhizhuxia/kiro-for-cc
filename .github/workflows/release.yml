@@ -84,9 +84,14 @@ jobs:
         
       - name: Create OpenVSX namespace
         run: |
-          ovsx create-namespace heisebaiyun -p ${{ secrets.OVSX_PAT }} || echo "Namespace already exists"
+          ovsx create-namespace notdp -p ${{ secrets.OVSX_PAT }} || echo "Namespace already exists"
         continue-on-error: true
         
       - name: Publish to OpenVSX
-        run: ovsx publish -p ${{ secrets.OVSX_PAT }}
+        run: |
+          # Create a copy of package.json with different publisher for OpenVSX
+          jq '.publisher = "notdp"' package.json > package-ovsx.json
+          mv package-ovsx.json package.json
+          ovsx publish -p ${{ secrets.OVSX_PAT }}
+          git checkout package.json
         continue-on-error: true
