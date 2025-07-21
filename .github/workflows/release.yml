@@ -46,25 +46,29 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
           
-      - name: Get tag message
-        id: get_tag_message
+      - name: Extract changelog for current version
+        id: extract_changelog
         run: |
-          # Extract the tag message from the annotated tag
-          git for-each-ref --format='%(contents)' refs/tags/v${{ steps.get_version.outputs.VERSION }} > full_message.txt
+          # Extract the changelog section for the current version
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
           
-          # Skip the first line "Release vX.X.X" and the empty line
-          tail -n +3 full_message.txt > changelog.txt
+          # Use awk to extract content between version headers
+          awk -v ver="## \\[$VERSION\\]" '
+            $0 ~ ver { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > version_changelog.txt
           
-          # Check if we have content
-          if [ -s changelog.txt ]; then
+          # Check if we found content
+          if [ -s version_changelog.txt ]; then
             echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-            cat changelog.txt >> $GITHUB_OUTPUT
+            cat version_changelog.txt >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "CHANGELOG=_No changelog provided in tag message_" >> $GITHUB_OUTPUT
+            echo "CHANGELOG=_No changelog found for version $VERSION in CHANGELOG.md_" >> $GITHUB_OUTPUT
           fi
           
-          rm -f full_message.txt changelog.txt
+          rm -f version_changelog.txt
         
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -75,7 +79,7 @@ jobs:
           body: |
             ## 🎉 Kiro for Claude Code v${{ steps.get_version.outputs.VERSION }}
             
-            ${{ steps.get_tag_message.outputs.CHANGELOG }}
+            ${{ steps.extract_changelog.outputs.CHANGELOG }}
             
             ### Installation
             
