@@ -49,20 +49,19 @@ jobs:
       - name: Get tag message
         id: get_tag_message
         run: |
-          # Get the full annotated tag message
-          FULL_MESSAGE=$(git tag -l --format='%(contents)' v${{ steps.get_version.outputs.VERSION }})
+          # Get the tag message (everything after the first line)
+          git tag -n1000 v${{ steps.get_version.outputs.VERSION }} | sed '1s/^v[^ ]* *//' | tail -n +2 > changelog.tmp
           
-          # Remove the first line (Release vX.X.X)
-          TAG_MESSAGE=$(echo "$FULL_MESSAGE" | tail -n +2)
-          
-          # If tag message is empty, generate a simple changelog
-          if [ -z "$TAG_MESSAGE" ]; then
-            echo "CHANGELOG=_No changelog provided in tag message_" >> $GITHUB_OUTPUT
-          else
+          # Check if changelog exists and has content
+          if [ -s changelog.tmp ]; then
             echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-            echo "$TAG_MESSAGE" >> $GITHUB_OUTPUT
+            cat changelog.tmp >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGELOG=_No changelog provided in tag message_" >> $GITHUB_OUTPUT
           fi
+          
+          rm -f changelog.tmp
         
       - name: Create Release
         uses: softprops/action-gh-release@v1
