@@ -49,8 +49,11 @@ jobs:
       - name: Get tag message
         id: get_tag_message
         run: |
-          # Get the annotated tag message (excluding the first line)
-          TAG_MESSAGE=$(git tag -l --format='%(contents:body)' v${{ steps.get_version.outputs.VERSION }})
+          # Get the full annotated tag message
+          FULL_MESSAGE=$(git tag -l --format='%(contents)' v${{ steps.get_version.outputs.VERSION }})
+          
+          # Remove the first line (Release vX.X.X)
+          TAG_MESSAGE=$(echo "$FULL_MESSAGE" | tail -n +2)
           
           # If tag message is empty, generate a simple changelog
           if [ -z "$TAG_MESSAGE" ]; then
