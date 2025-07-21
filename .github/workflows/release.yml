@@ -46,51 +46,19 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
           
-      - name: Get commit history
-        id: get_commits
+      - name: Get tag message
+        id: get_tag_message
         run: |
-          if [ -n "${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}" ]; then
-            COMMITS=$(git log ${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}..HEAD --oneline)
+          # Get the annotated tag message (excluding the first line)
+          TAG_MESSAGE=$(git tag -l --format='%(contents:body)' v${{ steps.get_version.outputs.VERSION }})
+          
+          # If tag message is empty, generate a simple changelog
+          if [ -z "$TAG_MESSAGE" ]; then
+            echo "CHANGELOG=_No changelog provided in tag message_" >> $GITHUB_OUTPUT
           else
-            COMMITS=$(git log --oneline | head -20)
-          fi
-          echo "COMMITS<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-      - name: Generate changelog with Claude
-        uses: anthropics/claude-code-action@beta
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          direct_prompt: |
-            Generate a concise changelog based on the following git commits.
-            
-            Commits:
-            ${{ steps.get_commits.outputs.COMMITS }}
-            
-            Use the following format:
-            ### ✨ New Features
-            - Feature description
-            
-            ### 🐛 Bug Fixes
-            - Fix description
-            
-            ### 🔧 Improvements
-            - Improvement description
-            
-            Only include sections that have actual changes. Save the result to a file named changelog.md.
-          allowed_tools: "Write"
-          
-      - name: Read changelog
-        id: read_changelog
-        run: |
-          if [ -f changelog.md ]; then
             echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-            cat changelog.md >> $GITHUB_OUTPUT
+            echo "$TAG_MESSAGE" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "CHANGELOG=" >> $GITHUB_OUTPUT
           fi
         
       - name: Create Release
@@ -102,7 +70,7 @@ jobs:
           body: |
             ## 🎉 Kiro for Claude Code v${{ steps.get_version.outputs.VERSION }}
             
-            ${{ steps.read_changelog.outputs.CHANGELOG }}
+            ${{ steps.get_tag_message.outputs.CHANGELOG }}
             
             ### Installation
             
