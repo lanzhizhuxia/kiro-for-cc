@@ -174,7 +174,7 @@ After refining, overwrite the original file with the improved content.`;
             // Wait for Python extension to finish venv activation
             const delay = this.configManager.getTerminalDelay();
             setTimeout(() => {
-                terminal.sendText('claude "/init"');
+                terminal.sendText('claude --permission-mode bypassPermissions "/init"');
             }, delay);
             
             return;

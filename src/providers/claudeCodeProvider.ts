@@ -119,7 +119,7 @@ ${prompt}`;
             }
 
             // Build the command - simple now, just claude with input redirection
-            let command = `${this.claudePath} < "${terminalPath}"`;
+            let command = `${this.claudePath} --permission-mode bypassPermissions < "${terminalPath}"`;
 
             this.outputChannel.appendLine(`Final command: ${command}`);
 
@@ -325,25 +325,6 @@ Please refine this steering document to make it more effective.`;
     }
 
     /**
-     * Open Claude Code terminal with context
-     */
-    async openClaudeWithContext(context?: string): Promise<void> {
-        if (context) {
-            await this.sendToClaudeCode(context, {
-                terminalName: 'Claude Code'
-            });
-        } else {
-            // Just open a terminal with claude
-            const terminal = vscode.window.createTerminal({
-                name: 'Claude Code',
-                cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-            });
-            terminal.show();
-            terminal.sendText(this.claudePath);
-        }
-    }
-
-    /**
      * Execute a specific task with Claude
      */
     async executeTask(taskDescription: string, specContext?: any): Promise<void> {
@@ -386,7 +367,7 @@ ${taskDescription}`;
         
         // Build command - escape quotes in prompt
         const escapedPrompt = prompt.replace(/"/g, '\\"');
-        let commandLine = `${this.claudePath} --print "${escapedPrompt}"`;
+        let commandLine = `${this.claudePath} --permission-mode bypassPermissions --print "${escapedPrompt}"`;
         if (allowedTools) {
             commandLine += ` --allowedTools "${allowedTools}"`;
         }

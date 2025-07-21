@@ -300,9 +300,9 @@ If a project CLAUDE.md exists and contains a "## Steering Documents" section, pl
                     vscode.Uri.file(tempFile),
                     Buffer.from(steeringContext)
                 );
-                terminal.sendText(`claude -p "Implement this task following the guidelines in ${tempFile}: ${taskText}"`);
+                terminal.sendText(`claude --permission-mode bypassPermissions -p "Implement this task following the guidelines in ${tempFile}: ${taskText}"`);
             } else {
-                terminal.sendText(`claude -p "Implement this task: ${taskText}"`);
+                terminal.sendText(`claude --permission-mode bypassPermissions -p "Implement this task: ${taskText}"`);
             }
             terminal.show();
         })
