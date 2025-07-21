@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2025-07-21
+
+### ✨ New Features
+
+- Add async loading for MCP server details
+- Show loading state while fetching server details
+- Display scope descriptions as tooltips instead of inline text
+
+### 🐛 Bug Fixes
+
+- Execute commands in workspace directory for proper scope detection (fixes missing project/local scope servers)
+
+### 🔧 Improvements
+
+- Parallelize server detail fetching for better performance
+- Improve MCP servers loading experience with immediate list display
+
 ## [0.1.7] - 2025-07-21
 
 ### ✨ New Features
