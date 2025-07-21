@@ -219,6 +219,8 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
         }),
 
         vscode.commands.registerCommand('kfc.steering.delete', async (item: any) => {
+            outputChannel.appendLine(`[Steering] Deleting: ${item.label}`);
+            
             await vscode.workspace.fs.delete(vscode.Uri.file(item.resourcePath));
 
             // Ask Claude to update CLAUDE.md to remove this document from the index
@@ -226,11 +228,34 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
             
 If a project CLAUDE.md exists and contains a "## Steering Documents" section, please update it to remove the reference to this deleted document.`;
 
-            await claudeProvider.processSteeringDocument(
-                prompt,
-                'delete',
-                { action: 'delete', documentName: item.label }
-            );
+            // Show progress notification with auto-dismiss
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Deleting "${item.label}" and updating CLAUDE.md...`,
+                cancellable: false
+            }, async () => {
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            });
+
+            // Use the provider's executeClaudeCommand method
+            const result = await claudeProvider.executeClaudeCommand(prompt, 'Edit');
+            
+            // Show result notification
+            if (result.exitCode === 0) {
+                // Use withProgress for auto-dismissing notification (2 seconds)
+                vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Steering document "${item.label}" deleted and CLAUDE.md updated successfully.`,
+                    cancellable: false
+                }, async () => {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                });
+            } else if (result.exitCode !== undefined) {
+                outputChannel.appendLine(`[Steering] Failed to update CLAUDE.md. Exit code: ${result.exitCode}`);
+                vscode.window.showErrorMessage(
+                    `Failed to update CLAUDE.md after deleting "${item.label}". Exit code: ${result.exitCode}`
+                );
+            }
         }),
 
         // CLAUDE.md commands

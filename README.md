@@ -40,26 +40,45 @@ A VSCode extension that brings spec-driven development to Claude Code. Manage yo
 
 ## Installation
 
+### Prerequisites
+
+1. **Claude Code Installation**: Ensure Claude Code is installed and configured
+
+2. **Compatibility**:
+
+| Platform                  | Support | Notes                                    | Status   |
+| ------------------------- | ------- | ---------------------------------------- | -------- |
+| macOS                     | ✅       | Fully supported                          | released |
+| Linux                     | ✅       | Fully supported                          | released |
+| Windows (WSL)             | ✅       | Supported with automatic path conversion | released |
+| Windows (CMD)             | ❌       | Not supported                            | TBD      |
+| Windows (PowerShell)      | ❌       | Not supported                            | TBD      |
+| Windows (MinTTY Git Bash) | ❌       | Not supported                            | TBD      |
+
 ### From Extension Marketplace
 
 **VSCode users:**
+
 1. Open VSCode
 2. Go to Extensions (Cmd+Shift+X)
 3. Search for "Kiro for Claude Code"
 4. Click Install
 
 Or via command line:
+
 ```bash
 code --install-extension heisebaiyun.kiro-for-cc
 ```
 
 **Cursor users:**
 The extension is available on OpenVSX Registry. In Cursor:
+
 1. Go to Extensions
 2. Search for "Kiro for Claude Code"
 3. Click Install
 
 Or via command line:
+
 ```bash
 cursor --install-extension heisebaiyun.kiro-for-cc
 ```
@@ -77,34 +96,6 @@ cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ```
 
 Replace `{latest-version}` with the actual version number, e.g., `0.1.5`.
-
-### Prerequisites
-
-1. **Claude Code Installation**: Ensure Claude Code is installed and configured
-
-2. **Platform Compatibility**: 
-   
-   **macOS & Linux**: ✅ Fully supported without any additional configuration
-   
-   **Windows**: Special requirements due to technical limitations
-   
-   Due to Claude Code's interactive terminal interface requirements, pipe/redirect operations are not supported in native Windows terminals (CMD, PowerShell, Git Bash).
-   
-   **Supported Environments:**
-   - ✅ **macOS/Linux**: All terminals work perfectly
-   - ✅ **WSL VSCode + WSL Terminal**: Full native Linux environment
-   - ✅ **Windows VSCode + WSL Terminal**: Automatic path conversion supported
-   - ❌ **Windows Native Terminals**: Not supported (CMD, PowerShell, Git Bash)
-   
-   **Technical Background:**
-   - Claude Code requires a TTY (terminal) environment for its interactive interface
-   - Windows terminals break the TTY connection when using pipes (`|`) or redirects (`<`)
-   - This limitation affects all Windows terminals including Git Bash (MinTTY)
-   
-   **Recommendation for Windows Users:**
-   - Install WSL2 (Windows Subsystem for Linux)
-   - **Best Practice**: Launch VSCode from within WSL (`code .` in WSL terminal)
-   - **Alternative**: Use WSL terminal within Windows VSCode (extension handles path conversion automatically)
 
 ## Usage
 

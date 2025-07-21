@@ -38,26 +38,45 @@
 
 ## 安装
 
+### 前置条件
+
+1. **Claude Code 安装**：确保 Claude Code 已安装并配置
+
+2. **兼容性**：
+
+| 平台                      | 支持情况 | 说明                     | 状态     |
+| ------------------------- | -------- | ------------------------ | -------- |
+| macOS                     | ✅        | 完全支持                 | released |
+| Linux                     | ✅        | 完全支持                 | released |
+| Windows (WSL)             | ✅        | 支持，自动路径转换       | released |
+| Windows (CMD)             | ❌        | 不支持                   | TBD      |
+| Windows (PowerShell)      | ❌        | 不支持                   | TBD      |
+| Windows (MinTTY Git Bash) | ❌        | 不支持                   | TBD      |
+
 ### 从扩展商店安装
 
 **VSCode 用户：**
+
 1. 打开 VSCode
 2. 进入扩展页面 (Cmd+Shift+X)
 3. 搜索 "Kiro for Claude Code"
 4. 点击安装
 
 或使用命令行：
+
 ```bash
 code --install-extension heisebaiyun.kiro-for-cc
 ```
 
 **Cursor 用户：**
 该扩展已发布到 OpenVSX Registry。在 Cursor 中：
+
 1. 进入扩展页面
 2. 搜索 "Kiro for Claude Code"
 3. 点击安装
 
 或使用命令行：
+
 ```bash
 cursor --install-extension heisebaiyun.kiro-for-cc
 ```
@@ -75,34 +94,6 @@ cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ```
 
 将 `{latest-version}` 替换为实际版本号，例如 `0.1.5`。
-
-### 前置条件
-
-1. **Claude Code 安装**：确保 Claude Code 已安装并配置
-
-2. **平台兼容性**：
-   
-   **macOS 和 Linux**：✅ 完全支持，无需任何额外配置
-   
-   **Windows**：由于技术限制需要特殊配置
-   
-   由于 Claude Code 的交互式终端界面要求，原生 Windows 终端（CMD、PowerShell、Git Bash）不支持管道/重定向操作。
-   
-   **支持的环境：**
-   - ✅ **macOS/Linux**：所有终端完美运行
-   - ✅ **WSL VSCode + WSL 终端**：完整的原生 Linux 环境
-   - ✅ **Windows VSCode + WSL 终端**：支持自动路径转换
-   - ❌ **Windows 原生终端**：不支持（CMD、PowerShell、Git Bash）
-   
-   **技术背景：**
-   - Claude Code 需要 TTY（终端）环境来运行交互式界面
-   - Windows 终端在使用管道（`|`）或重定向（`<`）时会断开 TTY 连接
-   - 此限制影响所有 Windows 终端，包括 Git Bash (MinTTY)
-   
-   **Windows 用户建议：**
-   - 安装 WSL2（Windows 子系统 Linux）
-   - **最佳实践**：在 WSL 中启动 VSCode（在 WSL 终端中执行 `code .`）
-   - **备选方案**：在 Windows VSCode 中使用 WSL 终端（扩展会自动处理路径转换）
 
 ## 使用方法
 

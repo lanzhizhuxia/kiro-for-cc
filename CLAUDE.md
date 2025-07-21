@@ -29,7 +29,7 @@ npm run package
 
 ### Project Structure
 
-```
+```plain
 src/
 ├── extension.ts           # Extension entry point, command registration
 ├── constants.ts          # Centralized configuration constants

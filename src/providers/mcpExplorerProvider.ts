@@ -181,17 +181,15 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
             // Execute claude mcp list command
             const { stdout, stderr } = await execAsync('claude mcp list');
 
-            if (stdout) {
-                this.outputChannel.appendLine(`claude mcp list stdout:\n${stdout}`);
-            }
+            // Only log errors, not normal output
             if (stderr) {
                 this.outputChannel.appendLine(`claude mcp list stderr: ${stderr}`);
+
+                if (!stdout) {
+                    return;
+                }
             }
 
-            if (stderr && !stdout) {
-                this.outputChannel.appendLine(`Error executing claude mcp list: ${stderr}`);
-                return;
-            }
 
             // Parse the output
             await this.parseMCPListOutput(stdout);

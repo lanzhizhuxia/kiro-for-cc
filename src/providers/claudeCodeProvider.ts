@@ -372,4 +372,77 @@ ${taskDescription}`;
             terminalName: 'Claude Code - Task Execution'
         });
     }
+
+    /**
+     * Execute Claude command with specific tools in background
+     * Returns a promise that resolves when the command completes
+     */
+    async executeClaudeCommand(
+        prompt: string,
+        allowedTools?: string
+    ): Promise<{ exitCode: number | undefined; output?: string }> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const cwd = workspaceFolder?.uri.fsPath;
+        
+        // Build command - escape quotes in prompt
+        const escapedPrompt = prompt.replace(/"/g, '\\"');
+        let commandLine = `${this.claudePath} --print "${escapedPrompt}"`;
+        if (allowedTools) {
+            commandLine += ` --allowedTools "${allowedTools}"`;
+        }
+        
+        // Create hidden terminal for background execution
+        const terminal = vscode.window.createTerminal({
+            name: 'Claude Code Background',
+            cwd,
+            hideFromUser: true
+        });
+        
+        return new Promise((resolve) => {
+            let shellIntegrationChecks = 0;
+            // Wait for shell integration to be available
+            const checkShellIntegration = setInterval(() => {
+                shellIntegrationChecks++;
+                
+                if (terminal.shellIntegration) {
+                    clearInterval(checkShellIntegration);
+                    
+                    // Execute command with shell integration
+                    const execution = terminal.shellIntegration.executeCommand(commandLine);
+                    
+                    // Listen for command completion
+                    const disposable = vscode.window.onDidEndTerminalShellExecution(event => {
+                        if (event.terminal === terminal && event.execution === execution) {
+                            disposable.dispose();
+                            
+                            // Only log errors
+                            if (event.exitCode !== 0) {
+                                this.outputChannel.appendLine(`[Claude] Command failed with exit code: ${event.exitCode}`);
+                                this.outputChannel.appendLine(`[Claude] Command was: ${commandLine}`);
+                            }
+                            
+                            resolve({
+                                exitCode: event.exitCode,
+                                output: undefined
+                            });
+                            
+                            // Clean up terminal after a short delay
+                            setTimeout(() => terminal.dispose(), 1000);
+                        }
+                    });
+                } else if (shellIntegrationChecks > 20) { // After 2 seconds
+                    // Fallback: execute without shell integration
+                    clearInterval(checkShellIntegration);
+                    this.outputChannel.appendLine(`[Claude] Shell integration not available, using fallback mode`);
+                    terminal.sendText(commandLine);
+                    
+                    // Resolve after a reasonable delay since we can't track completion
+                    setTimeout(() => {
+                        resolve({ exitCode: undefined });
+                        terminal.dispose();
+                    }, 5000);
+                }
+            }, 100);
+        });
+    }
 }
