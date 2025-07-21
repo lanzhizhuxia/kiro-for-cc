@@ -14,6 +14,7 @@ interface MCPServerInfo {
     env?: Record<string, string>;
     url?: string;
     headers?: Record<string, string>;
+    isLoadingDetails?: boolean;  // Whether details are being loaded
 }
 
 export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
@@ -29,19 +30,13 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
         outputChannel: vscode.OutputChannel
     ) {
         this.outputChannel = outputChannel;
-        this.loadMCPServers().then(() => {
-            this.isLoading = false;
-            this._onDidChangeTreeData.fire();
-        });
+        this.loadMCPServers();
     }
 
     refresh(): void {
         this.isLoading = true;
         this._onDidChangeTreeData.fire(); // Fire immediately to show loading state
-        this.loadMCPServers().then(() => {
-            this.isLoading = false;
-            this._onDidChangeTreeData.fire(); // Fire again to show the loaded servers
-        });
+        this.loadMCPServers();
     }
 
     getTreeItem(element: MCPItem): vscode.TreeItem {
@@ -92,16 +87,37 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
             // Show server details as children in the order: Scope, Type, Command, Environment (if any)
             const server = element.serverInfo;
             const items: MCPItem[] = [];
+            
+            // If still loading details, show loading message
+            if (server.isLoadingDetails) {
+                items.push(new MCPItem(
+                    'Loading server details...',
+                    vscode.TreeItemCollapsibleState.None,
+                    'mcp-loading',
+                    `${element.id}-loading`,
+                    undefined,
+                    this.context
+                ));
+                return items;
+            }
 
             // 1. Scope (first)
-            items.push(new MCPItem(
-                server.scopeDisplay || `Scope: ${server.scope}`,
+            const scopeItem = new MCPItem(
+                `Scope: ${server.scope}`,
                 vscode.TreeItemCollapsibleState.None,
                 'mcp-detail',
                 `${element.id}-scope`,
                 undefined,
                 this.context
-            ));
+            );
+            // If we have full scope display text, extract the description for tooltip
+            if (server.scopeDisplay) {
+                const match = server.scopeDisplay.match(/Scope:\s*\w+\s*\(([^)]+)\)/);
+                if (match) {
+                    scopeItem.tooltip = match[1];
+                }
+            }
+            items.push(scopeItem);
 
             // 2. Type
             items.push(new MCPItem(
@@ -178,8 +194,13 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
         this.servers.clear();
 
         try {
-            // Execute claude mcp list command
-            const { stdout, stderr } = await execAsync('claude mcp list');
+            // Get workspace folder path
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
+            
+            // Execute claude mcp list command in the workspace directory
+            const { stdout, stderr } = await execAsync('claude mcp list', { cwd });
+            
 
             // Only log errors, not normal output
             if (stderr) {
@@ -193,11 +214,13 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
 
             // Parse the output
             await this.parseMCPListOutput(stdout);
+            
+            // Mark loading complete and refresh UI to show the list
+            this.isLoading = false;
+            this._onDidChangeTreeData.fire();
 
-            // Get detailed info for each server
-            for (const name of this.servers.keys()) {
-                await this.loadServerDetails(name);
-            }
+            // Load detailed info for each server asynchronously (don't await)
+            this.loadAllServerDetailsAsync();
 
         } catch (error) {
             this.outputChannel.appendLine(`Failed to load MCP servers: ${error}`);
@@ -218,29 +241,54 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
                 this.servers.set(name, {
                     name,
                     type: 'stdio', // Default, will be updated with details
-                    scope: 'local' // Default, will be updated with details
+                    scope: 'local', // Default, will be updated with details
+                    isLoadingDetails: true // Mark as loading
                 });
             }
         }
     }
 
+    private async loadAllServerDetailsAsync() {
+        // Load all server details in parallel
+        const detailPromises = Array.from(this.servers.keys()).map(async (name) => {
+            await this.loadServerDetails(name);
+            // After loading each server, refresh just that server in the UI
+            this._onDidChangeTreeData.fire();
+        });
+        
+        // Don't await - let them run in background
+        Promise.all(detailPromises).catch(err => {
+            this.outputChannel.appendLine(`Error loading server details: ${err}`);
+        });
+    }
+
     private async loadServerDetails(name: string) {
         try {
-            const { stdout, stderr } = await execAsync(`claude mcp get ${name}`);
+            // Get workspace folder path
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
+            
+            const { stdout, stderr } = await execAsync(`claude mcp get ${name}`, { cwd });
 
             if (stderr) {
                 this.outputChannel.appendLine(`Error getting details for ${name}: ${stderr}`);
-                return;
+                // Don't return here - stderr might just be warnings
             }
 
             // Parse the details output
             const server = this.servers.get(name);
             if (server) {
                 this.parseServerDetails(server, stdout);
+                server.isLoadingDetails = false; // Mark as loaded
             }
 
         } catch (error) {
             this.outputChannel.appendLine(`Failed to get details for ${name}: ${error}`);
+            // Don't remove the server from the list, just show it with default values
+            const server = this.servers.get(name);
+            if (server) {
+                server.isLoadingDetails = false; // Mark as loaded even on error
+            }
         }
     }
 
