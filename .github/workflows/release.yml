@@ -52,12 +52,8 @@ jobs:
           # Extract the changelog section for the current version
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           
-          # Use awk to extract content between version headers
-          awk -v ver="## \\[$VERSION\\]" '
-            $0 ~ ver { found=1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md > version_changelog.txt
+          # Use sed to extract content between version headers
+          sed -n "/^## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '1d;$d' > version_changelog.txt
           
           # Check if we found content
           if [ -s version_changelog.txt ]; then
