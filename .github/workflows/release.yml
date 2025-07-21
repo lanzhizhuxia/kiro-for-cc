@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -15,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 需要完整历史来获取提交记录
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -37,6 +40,38 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
         
+      - name: Get previous tag
+        id: get_previous_tag
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          
+      - name: Generate changelog with Claude
+        id: generate_changelog
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          direct_prompt: |
+            Please analyze the git commits between ${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }} and v${{ steps.get_version.outputs.VERSION }} and generate a concise changelog.
+            
+            Use the following format:
+            ### ✨ 新功能
+            - 功能描述
+            
+            ### 🐛 修复
+            - 修复描述
+            
+            ### 🔧 改进
+            - 改进描述
+            
+            Only include sections that have actual changes. Be concise and user-friendly.
+            The commits to analyze are:
+            $(git log ${{ steps.get_previous_tag.outputs.PREVIOUS_TAG }}..HEAD --oneline)
+            
+            Output ONLY the changelog content, no extra text.
+          allowed_tools: "Bash(git log*)"
+          output_variable: changelog
+        
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -45,6 +80,8 @@ jobs:
           name: Release v${{ steps.get_version.outputs.VERSION }}
           body: |
             ## 🎉 Kiro for Claude Code v${{ steps.get_version.outputs.VERSION }}
+            
+            ${{ steps.generate_changelog.outputs.changelog }}
             
             ### Installation
             
