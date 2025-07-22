@@ -78,7 +78,7 @@ Specs base path: {{specsPath}}
 
 **实现要点**：
 
-- 使用 Webpack 的 `raw-loader` 将 .md 文件作为字符串导入
+- 使用构建脚本将 .md 文件编译为 TypeScript 模块
 - 使用 `gray-matter` 库解析 Markdown frontmatter
 - 使用 Handlebars 模板引擎处理变量替换
 - 启动时预编译所有模板，存储在内存中
@@ -286,7 +286,7 @@ Please refine the requirements document...
 
 1. **Frontmatter 解析**：使用 `gray-matter` 库
 2. **模板引擎**：使用 `handlebars` 处理变量替换
-3. **资源加载**：使用 Webpack 的 `raw-loader` 导入 .md 文件
+3. **资源加载**：使用构建脚本在编译时将 .md 文件转换为 TypeScript 模块
 4. **缓存策略**：启动时预加载所有模板到内存
 5. **Markdown 处理**：直接使用原始内容，不需要额外解析
 

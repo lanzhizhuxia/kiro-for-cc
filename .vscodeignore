@@ -20,3 +20,9 @@ image.png
 CHANGELOG.md
 CLAUDE.md
 scripts/**
+tests/**
+*.test.ts
+*.test.js
+jest.config.js
+tsconfig.test.json
+coverage/**
