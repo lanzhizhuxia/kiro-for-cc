@@ -21,10 +21,14 @@ Help the user publish a new version of the extension by:
    - `## [X.X.X] - YYYY-MM-DD` format
    - Generated changelog with sections for New Features, Bug Fixes, and Improvements
    - Keep all previous versions' changelogs intact
-5. Update package.json version using `npm version X.X.X --no-git-tag-version`.
-6. Commit CHANGELOG.md, package.json and package-lock.json with message "chore: bump version to X.X.X".
-7. Create an annotated tag `vX.X.X` with message "Release vX.X.X - See CHANGELOG.md for details".
-8. Push both the commit and tag to origin.
-9. Inform the user that GitHub Actions will handle the rest.
+5. Update documentation files with the new version:
+   - Update version references in CLAUDE.md if needed
+   - Update version references in README.md (e.g., in installation commands)
+   - Update version references in README.zh-CN.md (e.g., in installation commands)
+6. Update package.json version using `npm version X.X.X --no-git-tag-version`.
+7. Commit CHANGELOG.md, CLAUDE.md, README.md, README.zh-CN.md, package.json and package-lock.json with message "chore: bump version to X.X.X".
+8. Create an annotated tag `vX.X.X` with message "Release vX.X.X - See CHANGELOG.md for details".
+9. Push both the commit and tag to origin.
+10. Inform the user that GitHub Actions will handle the rest.
 
 Make sure to handle errors gracefully and provide clear feedback at each step.

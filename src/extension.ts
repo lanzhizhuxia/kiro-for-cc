@@ -10,6 +10,7 @@ import { OverviewProvider } from './providers/overviewProvider';
 import { ConfigManager } from './utils/configManager';
 import { CONFIG_FILE_NAME, VSC_CONFIG_NAMESPACE } from './constants';
 import { PromptLoader } from './services/promptLoader';
+import { UpdateChecker } from './utils/updateChecker';
 
 let ccProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
@@ -63,15 +64,21 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider('kfc.views.mcpServerStatus', mcpExplorer)
     );
 
+    // Initialize update checker
+    const updateChecker = new UpdateChecker(context, outputChannel);
+
     // Register commands
-    registerCommands(context, hooksExplorer, mcpExplorer);
+    registerCommands(context, hooksExplorer, mcpExplorer, updateChecker);
 
     // Initialize default settings file if not exists
     await initializeDefaultSettings();
 
     // Set up file watchers
     setupFileWatchers(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer);
-
+    
+    // Check for updates on startup
+    updateChecker.checkForUpdates();
+    outputChannel.appendLine('Update check initiated');
 
 }
 
@@ -165,7 +172,7 @@ async function toggleViews() {
 }
 
 
-function registerCommands(context: vscode.ExtensionContext, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider) {
+function registerCommands(context: vscode.ExtensionContext, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider, updateChecker: UpdateChecker) {
     // Spec commands
     const createSpecCommand = vscode.commands.registerCommand('kfc.spec.create', async () => {
         outputChannel.appendLine('\n=== COMMAND kfc.spec.create TRIGGERED ===');
@@ -271,6 +278,12 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
     context.subscriptions.push(
         vscode.commands.registerCommand('kfc.mcp.refresh', () => {
             mcpExplorer.refresh();
+        }),
+
+        // Update checker command
+        vscode.commands.registerCommand('kfc.checkForUpdates', async () => {
+            outputChannel.appendLine('Manual update check requested');
+            await updateChecker.checkForUpdates(true); // Force check
         }),
 
         // Overview and settings commands

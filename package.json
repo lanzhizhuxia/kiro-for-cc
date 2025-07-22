@@ -157,6 +157,12 @@
         "icon": "$(gear)"
       },
       {
+        "command": "kfc.checkForUpdates",
+        "title": "Check for Updates",
+        "category": "Kiro",
+        "icon": "$(sync)"
+      },
+      {
         "command": "kfc.help.open",
         "title": "Kiro Help",
         "category": "Kiro",
@@ -231,6 +237,9 @@
         {
           "command": "kfc.steering.create",
           "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "kfc.checkForUpdates"
         }
       ]
     },
