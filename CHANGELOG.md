@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9] - 2025-07-22
+
+### ✨ New Features
+
+- Add automatic update checker with GitHub API integration
+  - Check for new versions on extension startup
+  - Manual check available via command palette: "Kiro: Check for Updates"
+  - Show notification with "View Changelog" and "Skip" options
+  - Rate limit checks to once per 24 hours
+  - Skip specific versions to avoid repeated notifications
+
+### 🧪 Testing
+
+- Add comprehensive test suite for prompt system
+  - Unit tests for prompt loader and markdown parsing
+  - Integration tests with snapshots for all prompts
+  - E2E test examples and version comparison
+  - Add test infrastructure (Jest, mocks, configs)
+
+### 🔧 Improvements
+
+- Refactor prompt system architecture
+  - Convert prompts from TypeScript strings to Markdown files
+  - Add build system for compiling prompts
+  - Create PromptLoader service for dynamic prompt loading
+  - Split createClaudeMd into createUserClaudeMd and createProjectClaudeMd
+  - Rename methods for clarity (invokeCCTerminal → invokeClaudeSplitView)
+  - Add file system watcher for automatic terminal renaming
+  - Implement notification utilities for better UX
+
 ## [0.1.8] - 2025-07-21
 
 ### ✨ New Features
