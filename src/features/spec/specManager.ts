@@ -2,32 +2,29 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ClaudeCodeProvider } from '../../providers/claudeCodeProvider';
 import { ConfigManager } from '../../utils/configManager';
+import { NotificationUtils } from '../../utils/notificationUtils';
+import { PromptLoader } from '../../services/promptLoader';
 
 export type SpecDocumentType = 'requirements' | 'design' | 'tasks';
 
 export class SpecManager {
     private configManager: ConfigManager;
+    private promptLoader: PromptLoader;
 
     constructor(
-        private context: vscode.ExtensionContext,
         private claudeProvider: ClaudeCodeProvider,
         private outputChannel: vscode.OutputChannel
     ) {
         this.configManager = ConfigManager.getInstance();
         this.configManager.loadSettings();
+        this.promptLoader = PromptLoader.getInstance();
     }
 
     public getSpecBasePath(): string {
         return this.configManager.getPath('specs');
     }
 
-    async createNewSpec() {
-        // Logging moved to outputChannel
-
-        // 添加到 Output Channel
-        this.outputChannel.appendLine('\n=== createNewSpec CALLED ===');
-        this.outputChannel.appendLine(`Time: ${new Date().toLocaleTimeString()}`);
-
+    async create() {
         // Get feature description only
         const description = await vscode.window.showInputBox({
             title: '✨ Create New Spec ✨',
@@ -37,11 +34,8 @@ export class SpecManager {
         });
 
         if (!description) {
-            this.outputChannel.appendLine('No description provided, exiting');
             return;
         }
-
-        this.outputChannel.appendLine(`Description: ${description}`);
 
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
@@ -49,81 +43,85 @@ export class SpecManager {
             return;
         }
 
+        // Show notification immediately after user input
+        NotificationUtils.showAutoDismissNotification('Claude is creating your spec. Check the terminal for progress.');
+
         // Let Claude handle everything - directory creation, naming, and file creation
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: 'Claude is creating your spec...',
-            cancellable: true
-        }, async (progress, token) => {
-            await this.claudeProvider.generateSpecContent(
-                'requirements',
-                {
-                    description,
-                    workspacePath: workspaceFolder.uri.fsPath,
-                    specBasePath: this.getSpecBasePath()
-                }
-            );
+        // Load and render the spec creation prompt
+        const prompt = this.promptLoader.renderPrompt('create-spec', {
+            description,
+            workspacePath: workspaceFolder.uri.fsPath,
+            specBasePath: this.getSpecBasePath()
         });
 
-        vscode.window.showInformationMessage(`Claude is creating your spec. Check the terminal for progress.`);
+        // Send to Claude and get the terminal
+        const terminal = await this.claudeProvider.invokeClaudeSplitView(prompt, 'KFC - Creating Spec');
+
+        // Set up automatic terminal renaming when spec folder is created
+        this.setupSpecFolderWatcher(workspaceFolder, terminal);
     }
 
-    async refreshSpec(uri: vscode.Uri) {
-        const document = await vscode.workspace.openTextDocument(uri);
-        const type = this.getDocumentType(uri.fsPath);
+    /**
+     * Set up a file system watcher to automatically rename the terminal 
+     * when a new spec folder is created
+     */
+    private async setupSpecFolderWatcher(workspaceFolder: vscode.WorkspaceFolder, terminal: vscode.Terminal): Promise<void> {
+        // Create watcher for new folders in the specs directory
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(workspaceFolder, `${this.getSpecBasePath()}/*`),
+            false, // Watch for creates
+            true,  // Ignore changes
+            true   // Ignore deletes
+        );
 
-        if (!type) {
-            vscode.window.showErrorMessage('Not a valid spec document');
-            return;
-        }
+        let disposed = false;
 
-        // Get the spec context
-        const specPath = path.dirname(uri.fsPath);
-        const context: any = {};
+        // Handle folder creation
+        const disposable = watcher.onDidCreate(async (uri) => {
+            if (disposed) return;
 
-        if (type === 'design') {
-            // Read requirements
-            const reqPath = path.join(specPath, 'requirements.md');
+            // Validate it's a directory
             try {
-                const reqDoc = await vscode.workspace.openTextDocument(reqPath);
-                context.requirements = reqDoc.getText();
+                const stats = await vscode.workspace.fs.stat(uri);
+                if (stats.type !== vscode.FileType.Directory) {
+                    this.outputChannel.appendLine(`[SpecManager] Skipping non-directory: ${uri.fsPath}`);
+                    return;
+                }
             } catch (error) {
-                vscode.window.showErrorMessage('Requirements document not found');
+                this.outputChannel.appendLine(`[SpecManager] Error checking path: ${error}`);
                 return;
             }
-        } else if (type === 'tasks') {
-            // Read design
-            const designPath = path.join(specPath, 'design.md');
-            try {
-                const designDoc = await vscode.workspace.openTextDocument(designPath);
-                context.design = designDoc.getText();
-            } catch (error) {
-                vscode.window.showErrorMessage('Design document not found');
-                return;
-            }
-        }
 
-        // Generate new content with Claude
-        const newContent = await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: `Claude is refreshing ${type}...`,
-            cancellable: true
-        }, async (progress, token) => {
-            // Add current content to context for refinement
-            context.currentContent = document.getText();
-            return await this.claudeProvider.generateSpecContent(type, context);
+            const specName = path.basename(uri.fsPath);
+            this.outputChannel.appendLine(`[SpecManager] New spec detected: ${specName}`);
+            try {
+                await this.claudeProvider.renameTerminal(terminal, `Spec: ${specName}`);
+            } catch (error) {
+                this.outputChannel.appendLine(`[SpecManager] Failed to rename terminal: ${error}`);
+            }
+
+            // Clean up after successful rename
+            this.disposeWatcher(disposable, watcher);
+            disposed = true;
         });
 
-        if (newContent) {
-            // Replace document content
-            const edit = new vscode.WorkspaceEdit();
-            const fullRange = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(document.getText().length)
-            );
-            edit.replace(uri, fullRange, newContent);
-            await vscode.workspace.applyEdit(edit);
-        }
+        // Auto-cleanup after timeout
+        setTimeout(() => {
+            if (!disposed) {
+                this.outputChannel.appendLine(`[SpecManager] Watcher timeout - cleaning up`);
+                this.disposeWatcher(disposable, watcher);
+                disposed = true;
+            }
+        }, 60000); // 60 seconds timeout
+    }
+
+    /**
+     * Dispose watcher and its event handler
+     */
+    private disposeWatcher(disposable: vscode.Disposable, watcher: vscode.FileSystemWatcher): void {
+        disposable.dispose();
+        watcher.dispose();
+        this.outputChannel.appendLine(`[SpecManager] Watcher disposed`);
     }
 
     async navigateToDocument(specName: string, type: SpecDocumentType) {
@@ -187,12 +185,26 @@ This document has not been created yet.`;
         }
     }
 
-    private getDocumentType(filePath: string): SpecDocumentType | null {
-        const basename = path.basename(filePath, '.md');
-        if (['requirements', 'design', 'tasks'].includes(basename)) {
-            return basename as SpecDocumentType;
+    async delete(specName: string): Promise<void> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
         }
-        return null;
+
+        const specPath = path.join(
+            workspaceFolder.uri.fsPath,
+            this.getSpecBasePath(),
+            specName
+        );
+
+        try {
+            await vscode.workspace.fs.delete(vscode.Uri.file(specPath), { recursive: true });
+            await NotificationUtils.showAutoDismissNotification(`Spec "${specName}" deleted successfully`);
+        } catch (error) {
+            this.outputChannel.appendLine(`[SpecManager] Failed to delete spec: ${error}`);
+            vscode.window.showErrorMessage(`Failed to delete spec: ${error}`);
+        }
     }
 
     async getSpecList(): Promise<string[]> {
@@ -220,7 +232,7 @@ This document has not been created yet.`;
         try {
             const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(specsPath));
             return entries
-                .filter(([name, type]) => type === vscode.FileType.Directory)
+                .filter(([, type]) => type === vscode.FileType.Directory)
                 .map(([name]) => name);
         } catch (error) {
             // Directory doesn't exist yet

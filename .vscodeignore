@@ -9,9 +9,14 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.git/**
+.github/**
 node_modules/**
 !node_modules/@anthropic-ai/claude-code/dist/**
-README.md
+README*.md
 .DS_Store
 *.vsix
 image.png
+.claude/**
+CHANGELOG.md
+CLAUDE.md
+scripts/**

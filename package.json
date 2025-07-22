@@ -76,7 +76,7 @@
       },
       {
         "view": "kfc.views.steeringExplorer",
-        "contents": "[$(globe) Create Global CLAUDE.md](command:kfc.steering.createGlobalClaude)\n\n[$(root-folder) Create Project CLAUDE.md](command:kfc.steering.createProjectClaude)"
+        "contents": "[$(globe) Create User Rule](command:kfc.steering.createUserRule)\n\n[$(root-folder) Create Project Rule](command:kfc.steering.createProjectRule)"
       },
       {
         "view": "kfc.views.mcpServerStatus",
@@ -89,12 +89,6 @@
         "title": "Create New Spec",
         "category": "Kiro",
         "icon": "$(plus)"
-      },
-      {
-        "command": "kfc.spec.refresh",
-        "title": "Refine Spec",
-        "category": "Kiro",
-        "icon": "$(sparkle)"
       },
       {
         "command": "kfc.steering.create",
@@ -133,14 +127,14 @@
         "icon": "$(trash)"
       },
       {
-        "command": "kfc.steering.createGlobalClaude",
-        "title": "Create Global CLAUDE.md",
+        "command": "kfc.steering.createUserRule",
+        "title": "Create User Rule",
         "category": "Kiro",
         "icon": "$(globe)"
       },
       {
-        "command": "kfc.steering.createProjectClaude",
-        "title": "Create Project CLAUDE.md",
+        "command": "kfc.steering.createProjectRule",
+        "title": "Create Project Rule",
         "category": "Kiro",
         "icon": "$(root-folder)"
       },
@@ -209,11 +203,6 @@
         }
       ],
       "view/item/context": [
-        {
-          "command": "kfc.spec.refresh",
-          "when": "view == kfc.views.specExplorer && viewItem =~ /spec-document/",
-          "group": "inline"
-        },
         {
           "command": "kfc.spec.delete",
           "when": "view == kfc.views.specExplorer && viewItem == spec",
@@ -292,14 +281,22 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build-prompts && npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "watch": "concurrently \"npm:watch:*\"",
+    "watch:ts": "tsc -watch -p ./",
+    "watch:prompts": "node scripts/watch-prompts.js",
+    "build-prompts": "node scripts/build-prompts.js",
+    "prebuild": "npm run build-prompts",
     "package": "vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.84.0",
+    "@types/handlebars": "^4.0.40",
     "@types/node": "^20.x",
+    "@types/vscode": "^1.84.0",
+    "concurrently": "^9.2.0",
+    "gray-matter": "^4.0.3",
+    "handlebars": "^4.7.8",
     "typescript": "^5.3.0",
     "vsce": "^2.15.0"
   }

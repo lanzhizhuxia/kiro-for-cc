@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { ClaudeCodeProvider } from './providers/claudeCodeProvider';
 import { SpecManager } from './features/spec/specManager';
 import { SteeringManager } from './features/steering/steeringManager';
@@ -9,16 +8,27 @@ import { HooksExplorerProvider } from './providers/hooksExplorerProvider';
 import { MCPExplorerProvider } from './providers/mcpExplorerProvider';
 import { OverviewProvider } from './providers/overviewProvider';
 import { ConfigManager } from './utils/configManager';
-import { CONFIG_FILE_NAME, DEFAULT_PATHS, VSC_CONFIG_NAMESPACE } from './constants';
+import { CONFIG_FILE_NAME, VSC_CONFIG_NAMESPACE } from './constants';
+import { PromptLoader } from './services/promptLoader';
 
-let claudeProvider: ClaudeCodeProvider;
+let ccProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
 let steeringManager: SteeringManager;
 export let outputChannel: vscode.OutputChannel;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Create output channel for debugging
-    outputChannel = vscode.window.createOutputChannel('Kiro for Claude Code');
+    outputChannel = vscode.window.createOutputChannel('Kiro for Claude Code - Debug');
+
+    // Initialize PromptLoader
+    try {
+        const promptLoader = PromptLoader.getInstance();
+        promptLoader.initialize();
+        outputChannel.appendLine('PromptLoader initialized successfully');
+    } catch (error) {
+        outputChannel.appendLine(`Failed to initialize PromptLoader: ${error}`);
+        vscode.window.showErrorMessage(`Failed to initialize prompt system: ${error}`);
+    }
 
     // 检查工作区状态
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -28,11 +38,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
     // Initialize Claude Code SDK provider with output channel
-    claudeProvider = new ClaudeCodeProvider(context, outputChannel);
+    ccProvider = new ClaudeCodeProvider(context, outputChannel);
 
     // Initialize feature managers with output channel
-    specManager = new SpecManager(context, claudeProvider, outputChannel);
-    steeringManager = new SteeringManager(context, claudeProvider, outputChannel);
+    specManager = new SpecManager(ccProvider, outputChannel);
+    steeringManager = new SteeringManager(ccProvider, outputChannel);
 
     // Register tree data providers
     const overviewProvider = new OverviewProvider(context);
@@ -161,11 +171,8 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
         outputChannel.appendLine('\n=== COMMAND kfc.spec.create TRIGGERED ===');
         outputChannel.appendLine(`Time: ${new Date().toLocaleTimeString()}`);
 
-        // 移除这个多余的信息提示，避免和输入框冲突
-        // vscode.window.showInformationMessage('Creating new spec...');
-
         try {
-            await specManager.createNewSpec();
+            await specManager.create();
         } catch (error) {
             outputChannel.appendLine(`Error in createNewSpec: ${error}`);
             vscode.window.showErrorMessage(`Failed to create spec: ${error}`);
@@ -176,7 +183,7 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
 
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('kfc.spec.refresh', async (item: any) => {
+        vscode.commands.registerCommand('kfc.spec.refresh', async () => {
             // Coming soon - show a friendly message instead of error
             vscode.window.showInformationMessage('Spec refinement feature coming soon!', 'OK');
             // TODO: Fix implementation to handle tree item properly
@@ -205,108 +212,49 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
     // Steering commands
     context.subscriptions.push(
         vscode.commands.registerCommand('kfc.steering.create', async () => {
-            await steeringManager.createSteeringDocument();
+            await steeringManager.createCustom();
         }),
 
         vscode.commands.registerCommand('kfc.steering.generateInitial', async () => {
-            await steeringManager.generateInitialSteeringDocs();
+            await steeringManager.init();
         }),
 
         vscode.commands.registerCommand('kfc.steering.refine', async (item: any) => {
             // Item is always from tree view
             const uri = vscode.Uri.file(item.resourcePath);
-            await steeringManager.refineSteeringDocument(uri);
+            await steeringManager.refine(uri);
         }),
 
         vscode.commands.registerCommand('kfc.steering.delete', async (item: any) => {
             outputChannel.appendLine(`[Steering] Deleting: ${item.label}`);
-            
-            await vscode.workspace.fs.delete(vscode.Uri.file(item.resourcePath));
 
-            // Ask Claude to update CLAUDE.md to remove this document from the index
-            const prompt = `The steering document "${item.label}" has been deleted from ${steeringManager.getSteeringBasePath()}.
-            
-If a project CLAUDE.md exists and contains a "## Steering Documents" section, please update it to remove the reference to this deleted document.`;
+            // Use SteeringManager to delete the document and update CLAUDE.md
+            const result = await steeringManager.delete(item.label, item.resourcePath);
 
-            // Show progress notification with auto-dismiss
-            vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Deleting "${item.label}" and updating CLAUDE.md...`,
-                cancellable: false
-            }, async () => {
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            });
-
-            // Use the provider's executeClaudeCommand method
-            const result = await claudeProvider.executeClaudeCommand(prompt, 'Edit');
-            
-            // Show result notification
-            if (result.exitCode === 0) {
-                // Use withProgress for auto-dismissing notification (2 seconds)
-                vscode.window.withProgress({
-                    location: vscode.ProgressLocation.Notification,
-                    title: `Steering document "${item.label}" deleted and CLAUDE.md updated successfully.`,
-                    cancellable: false
-                }, async () => {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                });
-            } else if (result.exitCode !== undefined) {
-                outputChannel.appendLine(`[Steering] Failed to update CLAUDE.md. Exit code: ${result.exitCode}`);
-                vscode.window.showErrorMessage(
-                    `Failed to update CLAUDE.md after deleting "${item.label}". Exit code: ${result.exitCode}`
-                );
+            if (!result.success && result.error) {
+                vscode.window.showErrorMessage(result.error);
             }
         }),
 
         // CLAUDE.md commands
-        vscode.commands.registerCommand('kfc.steering.createGlobalClaude', async () => {
-            await steeringManager.createClaudeMd('global');
+        vscode.commands.registerCommand('kfc.steering.createUserRule', async () => {
+            await steeringManager.createUserClaudeMd();
         }),
 
-        vscode.commands.registerCommand('kfc.steering.createProjectClaude', async () => {
-            await steeringManager.createClaudeMd('project');
+        vscode.commands.registerCommand('kfc.steering.createProjectRule', async () => {
+            await steeringManager.createProjectClaudeMd();
         })
     );
 
     // Spec delete command
     context.subscriptions.push(
         vscode.commands.registerCommand('kfc.spec.delete', async (item: any) => {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (workspaceFolder) {
-                // Get specs path from configuration
-                const configManager = ConfigManager.getInstance();
-                const specsPath = configManager.getPath('specs');
-
-                const specPath = vscode.Uri.file(
-                    path.join(workspaceFolder.uri.fsPath, specsPath, item.label)
-                );
-                await vscode.workspace.fs.delete(specPath, { recursive: true });
-            }
+            await specManager.delete(item.label);
         })
     );
 
     // Claude Code integration commands
-    context.subscriptions.push(
-
-        vscode.commands.registerCommand('kfc.claude.implementTask', async (taskText: string) => {
-            // Get all steering documents for context
-            const steeringContext = await steeringManager.loadSteeringContext();
-
-            const terminal = vscode.window.createTerminal('Claude Code');
-            if (steeringContext) {
-                // Create a temporary file with steering context
-                const tempFile = `/tmp/steering-context-${Date.now()}.md`;
-                await vscode.workspace.fs.writeFile(
-                    vscode.Uri.file(tempFile),
-                    Buffer.from(steeringContext)
-                );
-                terminal.sendText(`claude --permission-mode bypassPermissions -p "Implement this task following the guidelines in ${tempFile}: ${taskText}"`);
-            } else {
-                terminal.sendText(`claude --permission-mode bypassPermissions -p "Implement this task: ${taskText}"`);
-            }
-            terminal.show();
-        })
-    );
+    // (removed unused kfc.claude.implementTask command)
 
     // Hooks commands (only refresh for Claude Code hooks)
     context.subscriptions.push(
@@ -389,7 +337,7 @@ function setupFileWatchers(
     mcpExplorer: MCPExplorerProvider
 ) {
     // Watch for changes in .claude directory with debouncing
-    const kiroWatcher = vscode.workspace.createFileSystemWatcher('**/.claude/**/*');
+    const kfcWatcher = vscode.workspace.createFileSystemWatcher('**/.claude/**/*');
 
     let refreshTimeout: NodeJS.Timeout | undefined;
     const debouncedRefresh = (event: string, uri: vscode.Uri) => {
@@ -399,7 +347,6 @@ function setupFileWatchers(
             clearTimeout(refreshTimeout);
         }
         refreshTimeout = setTimeout(() => {
-            outputChannel.appendLine('[FileWatcher] Executing refresh after debounce');
             specExplorer.refresh();
             steeringExplorer.refresh();
             hooksExplorer.refresh();
@@ -407,11 +354,11 @@ function setupFileWatchers(
         }, 1000); // Increase debounce time to 1 second
     };
 
-    kiroWatcher.onDidCreate((uri) => debouncedRefresh('Create', uri));
-    kiroWatcher.onDidDelete((uri) => debouncedRefresh('Delete', uri));
-    kiroWatcher.onDidChange((uri) => debouncedRefresh('Change', uri));
+    kfcWatcher.onDidCreate((uri) => debouncedRefresh('Create', uri));
+    kfcWatcher.onDidDelete((uri) => debouncedRefresh('Delete', uri));
+    kfcWatcher.onDidChange((uri) => debouncedRefresh('Change', uri));
 
-    context.subscriptions.push(kiroWatcher);
+    context.subscriptions.push(kfcWatcher);
 
     // Watch for changes in Claude settings
     const claudeSettingsWatcher = vscode.workspace.createFileSystemWatcher(
