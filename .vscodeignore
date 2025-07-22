@@ -13,12 +13,10 @@ vsc-extension-quickstart.md
 **/temp/**
 temp/**
 node_modules/**
-!node_modules/gray-matter/**
-!node_modules/handlebars/**
 README*.md
 .DS_Store
 *.vsix
-image.png
+!media/**
 .claude/**
 CHANGELOG.md
 CLAUDE.md
@@ -30,3 +28,9 @@ jest.config.js
 tsconfig.test.json
 coverage/**
 dist/__tests__/**
+screenshots/**
+webpack.config.js
+*.log
+**/*.ts
+!**/*.d.ts
+src/**/*.js

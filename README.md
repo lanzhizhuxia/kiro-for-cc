@@ -34,7 +34,7 @@ A VSCode extension that brings spec-driven development to Claude Code. Manage yo
 
 ## Screenshot
 
-![Kiro for Claude Code Extension](./image.png)
+![Kiro for Claude Code Extension](./screenshots/image.png)
 
 *The extension provides a comprehensive sidebar interface with organized views for specs, steering documents, MCP servers, and hooks management. All your Claude Code enhancement tools in one place.*
 

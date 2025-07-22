@@ -32,7 +32,7 @@
 
 ## 界面截图
 
-![Kiro for Claude Code 扩展界面](./image.png)
+![Kiro for Claude Code 扩展界面](./screenshots/image.png)
 
 *该扩展提供了一个综合性的侧边栏界面，包含规范、引导文档、MCP 服务器和钩子管理等有序组织的视图。所有 Claude Code 增强工具都集中在一个地方。*
 
@@ -44,14 +44,14 @@
 
 2. **兼容性**：
 
-| 平台                      | 支持情况 | 说明                     | 状态     |
-| ------------------------- | -------- | ------------------------ | -------- |
-| macOS                     | ✅        | 完全支持                 | released |
-| Linux                     | ✅        | 完全支持                 | released |
-| Windows (WSL)             | ✅        | 支持，自动路径转换       | released |
-| Windows (CMD)             | ❌        | 不支持                   | TBD      |
-| Windows (PowerShell)      | ❌        | 不支持                   | TBD      |
-| Windows (MinTTY Git Bash) | ❌        | 不支持                   | TBD      |
+| 平台                      | 支持情况 | 说明               | 状态     |
+| ------------------------- | -------- | ------------------ | -------- |
+| macOS                     | ✅        | 完全支持           | released |
+| Linux                     | ✅        | 完全支持           | released |
+| Windows (WSL)             | ✅        | 支持，自动路径转换 | released |
+| Windows (CMD)             | ❌        | 不支持             | TBD      |
+| Windows (PowerShell)      | ❌        | 不支持             | TBD      |
+| Windows (MinTTY Git Bash) | ❌        | 不支持             | TBD      |
 
 ### 从扩展商店安装
 

@@ -12,7 +12,7 @@ import { CONFIG_FILE_NAME, VSC_CONFIG_NAMESPACE } from './constants';
 import { PromptLoader } from './services/promptLoader';
 import { UpdateChecker } from './utils/updateChecker';
 
-let ccProvider: ClaudeCodeProvider;
+let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
 let steeringManager: SteeringManager;
 export let outputChannel: vscode.OutputChannel;
@@ -39,11 +39,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
     // Initialize Claude Code SDK provider with output channel
-    ccProvider = new ClaudeCodeProvider(context, outputChannel);
+    claudeCodeProvider = new ClaudeCodeProvider(context, outputChannel);
+
+    // 初始化 Claude Code 权限
+    // Initialize Claude Code permissions on first run
+    ClaudeCodeProvider.initializePermissions(context, outputChannel).catch(error => {
+        outputChannel.appendLine(`Failed to initialize Claude Code permissions: ${error}`);
+    });
 
     // Initialize feature managers with output channel
-    specManager = new SpecManager(ccProvider, outputChannel);
-    steeringManager = new SteeringManager(ccProvider, outputChannel);
+    specManager = new SpecManager(claudeCodeProvider, outputChannel);
+    steeringManager = new SteeringManager(claudeCodeProvider, outputChannel);
 
     // Register tree data providers
     const overviewProvider = new OverviewProvider(context);
@@ -75,7 +81,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Set up file watchers
     setupFileWatchers(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer);
-    
+
     // Check for updates on startup
     updateChecker.checkForUpdates();
     outputChannel.appendLine('Update check initiated');
@@ -338,6 +344,27 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
         vscode.commands.registerCommand('kfc.menu.open', async () => {
             outputChannel.appendLine('Opening Kiro menu...');
             await toggleViews();
+        }),
+
+        // Permission debug commands
+        vscode.commands.registerCommand('kfc.permission.check', async () => {
+            const hasPermission = context.globalState.get<boolean>('kiroForClaudeCode.hasRunInitialPermission', false);
+            vscode.window.showInformationMessage(`Claude Code Permission Status: ${hasPermission ? '✅ Granted' : '❌ Not Granted'}`);
+            outputChannel.appendLine(`[Permission Check] Status: ${hasPermission}`);
+        }),
+
+        vscode.commands.registerCommand('kfc.permission.reset', async () => {
+            const answer = await vscode.window.showWarningMessage(
+                'This will reset Claude Code permissions. You will need to re-grant permissions.',
+                'Reset',
+                'Cancel'
+            );
+
+            if (answer === 'Reset') {
+                await context.globalState.update('kiroForClaudeCode.hasRunInitialPermission', false);
+                vscode.window.showInformationMessage('Permissions reset. Please restart VSCode to re-initialize.');
+                outputChannel.appendLine('[Permission Reset] Permissions have been reset');
+            }
         })
     );
 }
