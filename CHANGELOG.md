@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.10] - 2025-07-22
+
+### 🐛 Bug Fixes
+
+- Move runtime dependencies from devDependencies to dependencies
+  - Fixes potential installation issues where required packages might not be installed
+
 ## [0.1.9] - 2025-07-22
 
 ### ✨ New Features
