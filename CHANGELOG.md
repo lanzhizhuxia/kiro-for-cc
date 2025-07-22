@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.11] - 2025-07-23
+
+### ✨ New Features
+
+- Add permission check webview for better user guidance
+  - Detect Claude CLI permission status before command execution
+  - Display interactive guidance when permissions are not granted
+  - Help users understand and resolve "Raw mode is not supported" errors
+  - Provide quick access to Claude settings configuration
+
+### 🐛 Bug Fixes
+
+- Fix "Raw mode is not supported" error when using piped input (fixes #3)
+  - Add `--no-interactive` flag when permission confirmation is needed
+  - Handle both folder permissions and bypass mode permissions correctly
+
+### 🔧 Improvements
+
+- Add webpack bundling support for production builds
+  - Reduce extension size from 1.04MB to 363KB (65% reduction)
+  - Reduce file count from 163 to 35 files (78% reduction)
+  - Improve extension loading performance
+- Move extension icon to proper media folder location
+- Update README with clearer feature descriptions
+- Improve Chinese translation in documentation
+
 ## [0.1.10] - 2025-07-22
 
 ### 🐛 Bug Fixes
