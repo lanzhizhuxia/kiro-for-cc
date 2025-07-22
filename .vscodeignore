@@ -10,8 +10,11 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.git/**
 .github/**
+**/temp/**
+temp/**
 node_modules/**
-!node_modules/@anthropic-ai/claude-code/dist/**
+!node_modules/gray-matter/**
+!node_modules/handlebars/**
 README*.md
 .DS_Store
 *.vsix
@@ -26,3 +29,4 @@ tests/**
 jest.config.js
 tsconfig.test.json
 coverage/**
+dist/__tests__/**
