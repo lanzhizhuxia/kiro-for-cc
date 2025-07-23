@@ -1,25 +1,21 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn } from 'child_process';
 import { ConfigManager } from '../utils/configManager';
 import { VSC_CONFIG_NAMESPACE } from '../constants';
-import { PermissionWebviewProvider } from '../webview/permissionWebview';
-import { NotificationUtils } from '../utils/notificationUtils';
+import { getPermissionManager } from '../extension';
 
 export class ClaudeCodeProvider {
     private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private configManager: ConfigManager;
-    private static PERMISSION_KEY = 'kiroForClaudeCode.hasRunInitialPermission';
 
-    constructor(context: vscode.ExtensionContext, outputChannel?: vscode.OutputChannel) {
+    constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
         this.context = context;
-        // Use provided output channel or create a new one
-        this.outputChannel = outputChannel || vscode.window.createOutputChannel('Kiro for Claude Code - Provider');
+        this.outputChannel = outputChannel;
+
         this.configManager = ConfigManager.getInstance();
         this.configManager.loadSettings();
-
         // Listen for configuration changes
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration(VSC_CONFIG_NAMESPACE)) {
@@ -42,68 +38,6 @@ export class ClaudeCodeProvider {
     }
 
 
-    /**
-     * Initialize Claude Code permissions on first run
-     */
-    static async initializePermissions(context: vscode.ExtensionContext, outputChannel?: vscode.OutputChannel): Promise<void> {
-        // Check if permission has already been granted globally
-        const hasPermission = context.globalState.get<boolean>(ClaudeCodeProvider.PERMISSION_KEY, false);
-
-        if (hasPermission) {
-            outputChannel?.appendLine('[ClaudeCodeProvider] Permission already granted, skipping initialization');
-            return;
-        }
-
-        outputChannel?.appendLine('[ClaudeCodeProvider] First time setup, showing permission prompt');
-
-        // Not trusted yet, need to show permission setup
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-
-        // Create a terminal for initial permission
-        const initTerminal = vscode.window.createTerminal({
-            name: 'Claude Code - Permission Setup',
-            cwd: workspaceFolder,
-            location: {
-                viewColumn: vscode.ViewColumn.Two
-            }
-        });
-
-        initTerminal.show();
-
-        // Run simple claude command to trigger permission prompt
-        const initCommand = `claude --permission-mode bypassPermissions "Setting up Claude Code permissions..."`;
-        initTerminal.sendText(initCommand, true);
-
-        // Show the permission webview
-        const userAccepted = await PermissionWebviewProvider.createOrShow(context);
-
-        // Handle user response
-        if (userAccepted) {
-            outputChannel?.appendLine('[ClaudeCodeProvider] User confirmed permission granted');
-            await context.globalState.update(ClaudeCodeProvider.PERMISSION_KEY, true);
-
-            // Show success notification
-            NotificationUtils.showAutoDismissNotification('✅ Claude Code permissions setup completed successfully!');
-
-            // Close the terminal
-            initTerminal.dispose();
-        } else {
-            outputChannel?.appendLine('[ClaudeCodeProvider] User cancelled permission setup');
-            initTerminal.dispose();
-
-            // Show warning
-            vscode.window.showWarningMessage(
-                'Claude Code permissions not granted. Some features may not work properly.',
-                'Try Again'
-            ).then(selection => {
-                if (selection === 'Try Again') {
-                    // Restart the permission process
-                    ClaudeCodeProvider.initializePermissions(context, outputChannel);
-                }
-            });
-
-        }
-    }
 
     /**
      * Convert Windows path to WSL path if needed
@@ -129,6 +63,18 @@ export class ClaudeCodeProvider {
      */
     async invokeClaudeSplitView(prompt: string, title: string = 'Kiro for Claude Code'): Promise<vscode.Terminal> {
         try {
+            // 获取 PermissionManager 并检查权限
+            const permissionManager = getPermissionManager();
+            if (permissionManager) {
+                const hasPermission = await permissionManager.checkPermission();
+                if (!hasPermission) {
+                    this.outputChannel.appendLine('[ClaudeCodeProvider] No permission, showing setup');
+                    const granted = await permissionManager.showPermissionSetup();
+                    if (!granted) {
+                        throw new Error('Claude Code permissions not granted');
+                    }
+                }
+            }
             // Create temp file with the prompt
             const promptFilePath = await this.createTempFile(prompt, 'prompt');
 
@@ -198,6 +144,18 @@ export class ClaudeCodeProvider {
     async invokeClaudeHeadless(
         prompt: string
     ): Promise<{ exitCode: number | undefined; output?: string }> {
+        // 获取 PermissionManager 实例并检查权限
+        const permissionManager = getPermissionManager();
+        if (permissionManager) {
+            const hasPermission = await permissionManager.checkPermission();
+            if (!hasPermission) {
+                this.outputChannel.appendLine('[ClaudeCodeProvider] No permission, showing setup');
+                const granted = await permissionManager.showPermissionSetup();
+                if (!granted) {
+                    throw new Error('Claude Code permissions not granted');
+                }
+            }
+        }
 
         this.outputChannel.appendLine(`[ClaudeCodeProvider] Invoking Claude Code in headless mode`);
         this.outputChannel.appendLine(`========================================`);
@@ -282,5 +240,25 @@ export class ClaudeCodeProvider {
                 }
             }, 100);
         });
+    }
+
+    /**
+     * 创建权限设置终端（供 PermissionManager 使用）
+     */
+    static createPermissionTerminal(): vscode.Terminal {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const terminal = vscode.window.createTerminal({
+            name: 'Claude Code - Permission Setup',
+            cwd: workspaceFolder,
+            location: { viewColumn: vscode.ViewColumn.Two }
+        });
+
+        terminal.show();
+        terminal.sendText(
+            'claude --permission-mode bypassPermissions',
+            true
+        );
+
+        return terminal;
     }
 }

@@ -88,3 +88,86 @@ export const commands = {
 export const extensions = {
   getExtension: jest.fn()
 };
+
+// Mock EventEmitter
+export class EventEmitter<T> {
+  private listeners: Array<(e: T) => any> = [];
+
+  event = (listener: (e: T) => any) => {
+    this.listeners.push(listener);
+    // Return disposable
+    return {
+      dispose: () => {
+        const index = this.listeners.indexOf(listener);
+        if (index > -1) {
+          this.listeners.splice(index, 1);
+        }
+      }
+    };
+  };
+
+  fire(data: T): void {
+    this.listeners.forEach(listener => listener(data));
+  }
+
+  dispose(): void {
+    this.listeners = [];
+  }
+}
+
+// Mock TreeItem
+export class TreeItem {
+  constructor(
+    public label: string,
+    public collapsibleState?: any
+  ) {}
+  
+  contextValue?: string;
+  tooltip?: string;
+  command?: any;
+  iconPath?: any;
+  description?: string;
+}
+
+// Mock TreeItemCollapsibleState
+export enum TreeItemCollapsibleState {
+  None = 0,
+  Collapsed = 1,
+  Expanded = 2
+}
+
+// Mock Terminal
+export interface Terminal {
+  name: string;
+  processId: Thenable<number | undefined>;
+  creationOptions: any;
+  exitStatus: any;
+  sendText(text: string, addNewLine?: boolean): void;
+  show(preserveFocus?: boolean): void;
+  hide(): void;
+  dispose(): void;
+}
+
+// Mock Webview
+export interface Webview {
+  html: string;
+  onDidReceiveMessage: EventEmitter<any>['event'];
+  postMessage(message: any): Thenable<boolean>;
+  asWebviewUri(localResource: Uri): Uri;
+  cspSource: string;
+}
+
+// Mock WebviewPanel
+export interface WebviewPanel {
+  viewType: string;
+  title: string;
+  webview: Webview;
+  visible: boolean;
+  viewColumn?: ViewColumn;
+  active: boolean;
+  iconPath?: Uri;
+  onDidDispose: EventEmitter<void>['event'];
+  onDidChangeViewState: EventEmitter<any>['event'];
+  reveal(viewColumn?: ViewColumn, preserveFocus?: boolean): void;
+  dispose(): void;
+}

@@ -18,7 +18,6 @@ README*.md
 *.vsix
 !media/**
 .claude/**
-CHANGELOG.md
 CLAUDE.md
 scripts/**
 tests/**

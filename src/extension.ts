@@ -11,11 +11,18 @@ import { ConfigManager } from './utils/configManager';
 import { CONFIG_FILE_NAME, VSC_CONFIG_NAMESPACE } from './constants';
 import { PromptLoader } from './services/promptLoader';
 import { UpdateChecker } from './utils/updateChecker';
+import { PermissionManager } from './features/permission/permissionManager';
 
 let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
 let steeringManager: SteeringManager;
+let permissionManager: PermissionManager;
 export let outputChannel: vscode.OutputChannel;
+
+// 导出 getter 函数供其他模块使用
+export function getPermissionManager(): PermissionManager {
+    return permissionManager;
+}
 
 export async function activate(context: vscode.ExtensionContext) {
     // Create output channel for debugging
@@ -41,11 +48,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize Claude Code SDK provider with output channel
     claudeCodeProvider = new ClaudeCodeProvider(context, outputChannel);
 
-    // 初始化 Claude Code 权限
-    // Initialize Claude Code permissions on first run
-    ClaudeCodeProvider.initializePermissions(context, outputChannel).catch(error => {
-        outputChannel.appendLine(`Failed to initialize Claude Code permissions: ${error}`);
-    });
+    // 创建并初始化 PermissionManager
+    permissionManager = new PermissionManager(context, outputChannel);
+
+    // 初始化权限系统（包含重试逻辑）
+    await permissionManager.initializePermissions();
 
     // Initialize feature managers with output channel
     specManager = new SpecManager(claudeCodeProvider, outputChannel);
@@ -179,6 +186,26 @@ async function toggleViews() {
 
 
 function registerCommands(context: vscode.ExtensionContext, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider, updateChecker: UpdateChecker) {
+
+    // Permission commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('kfc.permission.reset', async () => {
+            const confirm = await vscode.window.showWarningMessage(
+                'Are you sure you want to reset Claude Code permissions? This will revoke the granted permissions.',
+                'Yes', 'No'
+            );
+
+            if (confirm === 'Yes') {
+                const success = await permissionManager.resetPermission();
+                if (success) {
+                    vscode.window.showInformationMessage('Permissions have been reset');
+                } else {
+                    vscode.window.showErrorMessage('Failed to reset permissions. Please check the output log.');
+                }
+            }
+        })
+    );
+
     // Spec commands
     const createSpecCommand = vscode.commands.registerCommand('kfc.spec.create', async () => {
         outputChannel.appendLine('\n=== COMMAND kfc.spec.create TRIGGERED ===');
@@ -348,24 +375,19 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
 
         // Permission debug commands
         vscode.commands.registerCommand('kfc.permission.check', async () => {
-            const hasPermission = context.globalState.get<boolean>('kiroForClaudeCode.hasRunInitialPermission', false);
-            vscode.window.showInformationMessage(`Claude Code Permission Status: ${hasPermission ? '✅ Granted' : '❌ Not Granted'}`);
-            outputChannel.appendLine(`[Permission Check] Status: ${hasPermission}`);
-        }),
+            // 使用新的 PermissionManager 检查真实的权限状态
+            const hasPermission = await permissionManager.checkPermission();
+            const configPath = require('os').homedir() + '/.claude.json';
 
-        vscode.commands.registerCommand('kfc.permission.reset', async () => {
-            const answer = await vscode.window.showWarningMessage(
-                'This will reset Claude Code permissions. You will need to re-grant permissions.',
-                'Reset',
-                'Cancel'
+            vscode.window.showInformationMessage(
+                `Claude Code Permission Status: ${hasPermission ? '✅ Granted' : '❌ Not Granted'}`
             );
 
-            if (answer === 'Reset') {
-                await context.globalState.update('kiroForClaudeCode.hasRunInitialPermission', false);
-                vscode.window.showInformationMessage('Permissions reset. Please restart VSCode to re-initialize.');
-                outputChannel.appendLine('[Permission Reset] Permissions have been reset');
-            }
-        })
+            outputChannel.appendLine(`[Permission Check] Status: ${hasPermission}`);
+            outputChannel.appendLine(`[Permission Check] Config file: ${configPath}`);
+            outputChannel.appendLine(`[Permission Check] Checking bypassPermissionsModeAccepted field in ~/.claude.json`);
+        }),
+
     );
 }
 
@@ -428,4 +450,7 @@ function setupFileWatchers(
 
 export function deactivate() {
     // Cleanup
+    if (permissionManager) {
+        permissionManager.dispose();
+    }
 }
