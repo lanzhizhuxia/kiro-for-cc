@@ -6,6 +6,12 @@ export enum FileType {
   SymbolicLink = 64
 }
 
+export enum ProgressLocation {
+  Notification = 15,
+  Window = 10,
+  SourceControl = 1
+}
+
 export class Uri {
   static file(path: string) {
     return {
@@ -39,7 +45,11 @@ export const window = {
     hide: jest.fn(),
     dispose: jest.fn()
   })),
-  terminals: []
+  terminals: [],
+  withProgress: jest.fn((options, task) => {
+    // Simply execute the task immediately
+    return task();
+  })
 };
 
 export const workspace = {
