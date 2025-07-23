@@ -3,6 +3,7 @@ import { ConfigReader } from './configReader';
 import { PermissionCache, IPermissionCache } from './permissionCache';
 import { PermissionWebview } from './permissionWebview';
 import { ClaudeCodeProvider } from '../../providers/claudeCodeProvider';
+import { NotificationUtils } from '../../utils/notificationUtils';
 
 export class PermissionManager {
     private cache: IPermissionCache;
@@ -35,7 +36,7 @@ export class PermissionManager {
                 this.closeUIElements();
 
                 // 显示成功通知
-                vscode.window.showInformationMessage(
+                NotificationUtils.showAutoDismissNotification(
                     '✅ Claude Code permissions detected and verified!'
                 );
             } else {

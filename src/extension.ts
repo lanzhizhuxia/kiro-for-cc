@@ -12,6 +12,7 @@ import { CONFIG_FILE_NAME, VSC_CONFIG_NAMESPACE } from './constants';
 import { PromptLoader } from './services/promptLoader';
 import { UpdateChecker } from './utils/updateChecker';
 import { PermissionManager } from './features/permission/permissionManager';
+import { NotificationUtils } from './utils/notificationUtils';
 
 let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
@@ -198,7 +199,9 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
             if (confirm === 'Yes') {
                 const success = await permissionManager.resetPermission();
                 if (success) {
-                    vscode.window.showInformationMessage('Permissions have been reset');
+                    NotificationUtils.showAutoDismissNotification(
+                        'Permissions have been reset'
+                    );
                 } else {
                     vscode.window.showErrorMessage('Failed to reset permissions. Please check the output log.');
                 }

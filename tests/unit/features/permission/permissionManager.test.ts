@@ -4,12 +4,14 @@ import { PermissionCache } from '../../../../src/features/permission/permissionC
 import { PermissionWebview } from '../../../../src/features/permission/permissionWebview';
 import { ClaudeCodeProvider } from '../../../../src/providers/claudeCodeProvider';
 import * as vscode from 'vscode';
+import { NotificationUtils } from '../../../../src/utils/notificationUtils';
 
 // Mock dependencies
 jest.mock('../../../../src/features/permission/configReader');
 jest.mock('../../../../src/features/permission/permissionCache');
 jest.mock('../../../../src/features/permission/permissionWebview');
 jest.mock('../../../../src/providers/claudeCodeProvider');
+jest.mock('../../../../src/utils/notificationUtils');
 
 describe('PermissionManager', () => {
     let permissionManager: PermissionManager;
@@ -66,13 +68,16 @@ describe('PermissionManager', () => {
 
         // Mock static methods
         (ClaudeCodeProvider.createPermissionTerminal as jest.Mock).mockReturnValue(mockTerminal);
-        (PermissionWebview.createOrShow as jest.Mock).mockImplementation(() => {});
-        (PermissionWebview.close as jest.Mock).mockImplementation(() => {});
+        (PermissionWebview.createOrShow as jest.Mock).mockImplementation(() => { });
+        (PermissionWebview.close as jest.Mock).mockImplementation(() => { });
 
         // Mock vscode APIs
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
         (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
+        
+        // Mock NotificationUtils
+        (NotificationUtils.showAutoDismissNotification as jest.Mock).mockResolvedValue(undefined);
     });
 
     afterEach(() => {
@@ -120,7 +125,7 @@ describe('PermissionManager', () => {
         it('PM-03: 无权限时显示权限设置界面', async () => {
             mockCache.refreshAndGet.mockResolvedValue(false);
             let acceptCallback: () => Promise<boolean>;
-            
+
             (PermissionWebview.createOrShow as jest.Mock).mockImplementation((ctx, callbacks) => {
                 acceptCallback = callbacks.onAccept;
             });
@@ -159,7 +164,7 @@ describe('PermissionManager', () => {
             );
             expect(PermissionWebview.close).toHaveBeenCalled();
             expect(mockTerminal.dispose).toHaveBeenCalled();
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+            expect(NotificationUtils.showAutoDismissNotification).toHaveBeenCalledWith(
                 '✅ Claude Code permissions detected and verified!'
             );
         });
@@ -281,7 +286,7 @@ describe('PermissionManager', () => {
 
         it('PM-09: 用户选择卸载扩展', async () => {
             mockCache.refreshAndGet.mockResolvedValue(false);
-            
+
             (PermissionWebview.createOrShow as jest.Mock).mockImplementation((ctx, callbacks) => {
                 setTimeout(() => callbacks.onCancel(), 10);
             });
@@ -308,17 +313,17 @@ describe('PermissionManager', () => {
     describe('UI 管理', () => {
         it('PM-UI-01: 正确管理 WebView 引用', () => {
             const mockPanel = { dispose: jest.fn() };
-            
+
             // Mock PermissionWebview.currentPanel getter
             Object.defineProperty(PermissionWebview, 'currentPanel', {
                 get: jest.fn(() => mockPanel),
                 configurable: true
             });
-            
-            (PermissionWebview.createOrShow as jest.Mock).mockImplementation(() => {});
+
+            (PermissionWebview.createOrShow as jest.Mock).mockImplementation(() => { });
 
             permissionManager = new PermissionManager(mockContext, mockOutputChannel);
-            
+
             // Call showPermissionSetup synchronously (don't await since we're testing the reference)
             const promise = (permissionManager as any).showPermissionSetup();
 
@@ -327,9 +332,9 @@ describe('PermissionManager', () => {
             expect(mockOutputChannel.appendLine).toHaveBeenCalledWith(
                 '[PermissionManager] WebView reference saved: Yes'
             );
-            
+
             // Clean up - resolve the promise
-            promise.then(() => {});
+            promise.then(() => { });
         });
 
         it('PM-UI-02: showPermissionSetup 处理错误', async () => {
