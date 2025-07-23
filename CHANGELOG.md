@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.12] - 2025-07-23
+
+### ✨ New Features
+
+- Implement Claude Code permission verification system (ref #3)
+  - Add permission check before Claude CLI execution
+  - Provide clear user guidance for permission setup
+
+### 🐛 Bug Fixes
+
+- Add missing vscode.ProgressLocation mock for integration tests
+  - Fixes test failures in CI/CD pipeline
+
+### 🔧 Improvements
+
+- Use NotificationUtils for auto-dismiss notifications
+  - Improve consistency in notification handling across the extension
+
 ## [0.1.11] - 2025-07-23
 
 ### ✨ New Features
