@@ -15,6 +15,8 @@ interface MCPServerInfo {
     url?: string;
     headers?: Record<string, string>;
     isLoadingDetails?: boolean;  // Whether details are being loaded
+    status?: 'connected' | 'disconnected';  // Whether the server is connected
+    removeCommand?: string;  // Command to remove the server
 }
 
 export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
@@ -87,7 +89,7 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
             // Show server details as children in the order: Scope, Type, Command, Environment (if any)
             const server = element.serverInfo;
             const items: MCPItem[] = [];
-            
+
             // If still loading details, show loading message
             if (server.isLoadingDetails) {
                 items.push(new MCPItem(
@@ -197,10 +199,10 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
             // Get workspace folder path
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
-            
+
             // Execute claude mcp list command in the workspace directory
             const { stdout, stderr } = await execAsync('claude mcp list', { cwd });
-            
+
 
             // Only log errors, not normal output
             if (stderr) {
@@ -214,7 +216,7 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
 
             // Parse the output
             await this.parseMCPListOutput(stdout);
-            
+
             // Mark loading complete and refresh UI to show the list
             this.isLoading = false;
             this._onDidChangeTreeData.fire();
@@ -230,18 +232,27 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
     }
 
     private async parseMCPListOutput(output: string) {
-        // Parse output format: "context7: npx -y @upstash/context7-mcp"
+        // Parse output format: "playwright: npx @playwright/mcp@latest - ✓ Connected"
         const lines = output.split('\n').filter(line => line.trim());
 
         for (const line of lines) {
             const colonIndex = line.indexOf(':');
             if (colonIndex > 0) {
                 const name = line.substring(0, colonIndex).trim();
-                // The rest is the command, but we'll get details from mcp get
+                
+                // Parse status from the line
+                let status: 'connected' | 'disconnected' = 'disconnected';
+                if (line.includes('✓ Connected')) {
+                    status = 'connected';
+                } else if (line.includes('✗ Failed to connect')) {
+                    status = 'disconnected';
+                }
+                
                 this.servers.set(name, {
                     name,
                     type: 'stdio', // Default, will be updated with details
                     scope: 'local', // Default, will be updated with details
+                    status, // Set the parsed status
                     isLoadingDetails: true // Mark as loading
                 });
             }
@@ -255,7 +266,7 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
             // After loading each server, refresh just that server in the UI
             this._onDidChangeTreeData.fire();
         });
-        
+
         // Don't await - let them run in background
         Promise.all(detailPromises).catch(err => {
             this.outputChannel.appendLine(`Error loading server details: ${err}`);
@@ -267,7 +278,7 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
             // Get workspace folder path
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
-            
+
             const { stdout, stderr } = await execAsync(`claude mcp get ${name}`, { cwd });
 
             if (stderr) {
@@ -356,6 +367,12 @@ export class MCPExplorerProvider implements vscode.TreeDataProvider<MCPItem> {
                         }
                     }
                 }
+            } else if (trimmed.startsWith('To remove this server')) {
+                // Parse remove command: "To remove this server, run: claude mcp remove "playwright" -s user"
+                const match = trimmed.match(/claude mcp remove "(.+?)" -s (.+)$/);
+                if (match) {
+                    server.removeCommand = `claude mcp remove "${match[1]}" -s ${match[2]}`;
+                }
             }
         }
     }
@@ -378,10 +395,12 @@ class MCPItem extends vscode.TreeItem {
         } else if (contextValue === 'mcp-loading') {
             this.iconPath = new vscode.ThemeIcon('sync~spin');
         } else if (contextValue === 'mcp-server') {
-            // Use server-environment icon for all server types
-            this.iconPath = new vscode.ThemeIcon('server-environment');
-
-            // No description for main server node
+            // Use different icons based on connection status
+            if (serverInfo?.status === 'disconnected') {
+                this.iconPath = new vscode.ThemeIcon('debug-disconnect');
+            } else {
+                this.iconPath = new vscode.ThemeIcon('server-environment');
+            }
         } else if (contextValue === 'mcp-detail') {
             if (label.startsWith('Type:')) {
                 this.iconPath = new vscode.ThemeIcon('symbol-property');
@@ -411,7 +430,16 @@ class MCPItem extends vscode.TreeItem {
 
         // Set tooltips
         if (contextValue === 'mcp-server' && serverInfo) {
-            this.tooltip = `MCP Server: ${label}\nType: ${serverInfo.type}\nScope: ${serverInfo.scope}`;
+            let tooltipText = `MCP Server: ${label}\nType: ${serverInfo.type}\nScope: ${serverInfo.scope}`;
+            
+            // Add status info to tooltip
+            if (serverInfo.status === 'disconnected') {
+                tooltipText += '\nStatus: ✗ Failed to connect';
+            } else if (serverInfo.status === 'connected') {
+                tooltipText += '\nStatus: ✓ Connected';
+            }
+            
+            this.tooltip = tooltipText;
         } else if (contextValue === 'mcp-detail') {
             this.tooltip = label;
         }
