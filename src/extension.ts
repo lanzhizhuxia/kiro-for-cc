@@ -82,7 +82,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const updateChecker = new UpdateChecker(context, outputChannel);
 
     // Register commands
-    registerCommands(context, hooksExplorer, mcpExplorer, updateChecker);
+    registerCommands(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer, updateChecker);
 
     // Initialize default settings file if not exists
     await initializeDefaultSettings();
@@ -186,7 +186,7 @@ async function toggleViews() {
 }
 
 
-function registerCommands(context: vscode.ExtensionContext, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider, updateChecker: UpdateChecker) {
+function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecExplorerProvider, steeringExplorer: SteeringExplorerProvider, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider, updateChecker: UpdateChecker) {
 
     // Permission commands
     context.subscriptions.push(
@@ -224,16 +224,7 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
 
     context.subscriptions.push(createSpecCommand);
 
-
     context.subscriptions.push(
-        vscode.commands.registerCommand('kfc.spec.refresh', async () => {
-            // Coming soon - show a friendly message instead of error
-            vscode.window.showInformationMessage('Spec refinement feature coming soon!', 'OK');
-            // TODO: Fix implementation to handle tree item properly
-            // const uri = vscode.Uri.file(item.resourcePath || '');
-            // await specManager.refreshSpec(uri);
-        }),
-
         vscode.commands.registerCommand('kfc.spec.navigate.requirements', async (specName: string) => {
             await specManager.navigateToDocument(specName, 'requirements');
         }),
@@ -249,6 +240,11 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
         vscode.commands.registerCommand('kfc.spec.implementTask', async () => {
             // Coming soon - show a friendly message instead of error
             vscode.window.showInformationMessage('Task implementation feature coming soon!', 'OK');
+        }),
+        vscode.commands.registerCommand('kfc.spec.refresh', async () => {
+            outputChannel.appendLine('[Manual Refresh] Refreshing spec explorer...');
+            specExplorer.refresh();
+            NotificationUtils.showAutoDismissNotification('Specs refreshed', 1000);
         })
     );
 
@@ -286,6 +282,12 @@ function registerCommands(context: vscode.ExtensionContext, hooksExplorer: Hooks
 
         vscode.commands.registerCommand('kfc.steering.createProjectRule', async () => {
             await steeringManager.createProjectClaudeMd();
+        }),
+
+        vscode.commands.registerCommand('kfc.steering.refresh', async () => {
+            outputChannel.appendLine('[Manual Refresh] Refreshing steering explorer...');
+            steeringExplorer.refresh();
+            NotificationUtils.showAutoDismissNotification('Steering documents refreshed', 1000);
         })
     );
 

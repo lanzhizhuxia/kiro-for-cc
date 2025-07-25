@@ -163,6 +163,18 @@
         "icon": "$(sync)"
       },
       {
+        "command": "kfc.spec.refresh",
+        "title": "Refresh Specs",
+        "category": "Kiro for CC",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "kfc.steering.refresh",
+        "title": "Refresh Steering",
+        "category": "Kiro for CC",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "kfc.help.open",
         "title": "Kiro Help",
         "category": "Kiro for CC",
@@ -197,7 +209,12 @@
         {
           "command": "kfc.spec.create",
           "when": "view == kfc.views.specExplorer",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "kfc.spec.refresh",
+          "when": "view == kfc.views.specExplorer",
+          "group": "navigation@2"
         },
         {
           "command": "kfc.steering.generateInitial",
@@ -208,6 +225,11 @@
           "command": "kfc.steering.create",
           "when": "view == kfc.views.steeringExplorer",
           "group": "navigation@1"
+        },
+        {
+          "command": "kfc.steering.refresh",
+          "when": "view == kfc.views.steeringExplorer",
+          "group": "navigation@3"
         },
         {
           "command": "kfc.mcp.refresh",
