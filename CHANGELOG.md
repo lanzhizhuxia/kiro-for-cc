@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2025-07-26
+
+### 🐛 Bug Fixes
+
+- Fix resource file loading issue in packaged extension
+  - Update resource paths from 'src/resources' to 'dist/resources' to match webpack bundle structure
+  - Add !src/resources/** to .vscodeignore to ensure resources are included in package
+  - Resolve "EntryNotFound (FileSystemError)" when copying built-in agents and system prompts
+
+### 📚 Documentation
+
+- Improve README documentation with centered screenshots
+- Add prominent Sub Agent feature introduction with visual guide
+- Synchronize content between English and Chinese README versions
+
 ## [0.2.0] - 2025-07-26
 
 ### ✨ New Features
