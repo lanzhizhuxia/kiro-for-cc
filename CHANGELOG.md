@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2025-07-26
+
+### ✨ New Features
+
+- Add spec sub-agents functionality for Claude Code integration
+  - Implement AgentManager for managing Claude Code agents
+  - Add AgentsExplorerProvider for displaying agents in VSCode sidebar
+  - Create built-in spec workflow agents (requirements, design, tasks, judge, impl, test)
+  - Add "New Spec (with Agents)" button to Spec Explorer
+  - Support automatic initialization of built-in agents on startup
+  - Enable spec-driven development workflow with Claude Code subagents
+
+- Enhance MCP server status parsing and display
+  - Parse connection status from 'claude mcp list' output
+  - Add removeCommand parsing from 'claude mcp get' output
+  - Show debug-disconnect icon for failed connections
+  - Update tooltip to display connection status
+
+### 🔧 Improvements
+
+- Add comprehensive unit tests for agent functionality
+  - Create tests for AgentManager with 14 test cases
+  - Create tests for AgentsExplorerProvider with 15 test cases
+  - Achieve 100% test coverage for new agent features
+
 ## [0.1.12] - 2025-07-23
 
 ### ✨ New Features
