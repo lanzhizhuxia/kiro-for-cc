@@ -121,7 +121,7 @@ code --install-extension kiro-for-cc-{latest-version}.vsix
 cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ```
 
-将 `{latest-version}` 替换为实际版本号，例如 `0.2.1`。
+将 `{latest-version}` 替换为实际版本号，例如 `0.2.2`。
 
 ## 使用方法
 

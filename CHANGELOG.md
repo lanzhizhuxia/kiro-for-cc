@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2025-07-27
+
+### 🐛 Bug Fixes
+
+- Force update built-in agents and system prompts on startup
+  - Always overwrite built-in resources to ensure users have the latest versions
+  - Prevents issues with outdated agents from previous installations
+  - Built-in agents remain in project's .claude/agents/kfc directory only
+
 ## [0.2.1] - 2025-07-26
 
 ### 🐛 Bug Fixes
