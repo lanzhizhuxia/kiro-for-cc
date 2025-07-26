@@ -9,6 +9,23 @@
 
 为 Claude Code 带来规范驱动开发的 VSCode 扩展。在充分利用 Claude Code 强大 AI 能力的同时，可视化管理你的规范文档和指导文档。
 
+**新功能：使用 Sub Agent 创建 SPEC ：**
+
+1. 点击活动栏中的 Kiro for CC 图标
+2. 在 SPEC 视图右上角，点击 "New Spec with Agents" 按钮（带闪光图标 ✨）
+3. 输入功能描述
+4. Claude 将自动：
+   - 加载规范工作流系统提示
+   - 将工作委派给专门的 agent（需求、设计、任务）
+   - 使用独立的上下文窗口并行处理每个阶段
+5. 随着 agent 完成工作，审查输出结果
+
+<p align="center">
+  <img src="screenshots/new-spec-with-agents.png" width="600" alt="New Spec with Agents">
+</p>
+
+> **注意**：Sub Agent 目前会出现执行时间偶尔很长的 bug。为了兼容原有功能，保留了两种方式：点击原有的 `+` 按钮仍使用旧版方式，新的 Sub Agent 按钮使用新方式。目前测试下来两者不会冲突，但可能会遇到问题。
+>
 ## 功能特性
 
 ### 📝 SPEC 管理
@@ -111,24 +128,13 @@ cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ### 创建规范
 
 **传统方法：**
+
 1. 点击活动栏中的 Kiro for CC 图标
 2. 在 SPEC 视图中，点击 `+` 按钮
 3. 输入功能描述
 4. Claude 将生成需求文档
 5. 审查并批准后再继续设计
 6. 设计完成后再生成任务
-
-**新功能：使用 Sub Agent（推荐）：**
-1. 点击活动栏中的 Kiro for CC 图标
-2. 在 SPEC 视图右上角，点击 "New Spec with Agents" 按钮（带闪光图标 ✨）
-3. 输入功能描述
-4. Claude 将自动：
-   - 加载规范工作流系统提示
-   - 将工作委派给专门的 agent（需求、设计、任务）
-   - 使用独立的上下文窗口并行处理每个阶段
-5. 随着 agent 完成工作，审查输出结果
-
-> **注意**：Sub Agent 目前会出现执行时间偶尔很长的 bug。为了兼容原有功能，保留了两种方式：点击原有的 `+` 按钮仍使用旧版方式，新的 Sub Agent 按钮使用新方式。目前测试下来两者不会冲突，但可能会遇到问题。
 
 ### 规范工作流
 

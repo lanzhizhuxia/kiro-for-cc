@@ -11,6 +11,23 @@
 
 A VSCode extension that brings spec-driven development to Claude Code. Manage your specs and steering documents visually while leveraging Claude Code's powerful AI capabilities.
 
+**NEW: Create SPEC with Sub Agents:**
+
+1. Click the Kiro for CC icon in the activity bar
+2. In the SPEC view header, click the "New Spec with Agents" button (with sparkle icon ✨)
+3. Enter a feature description
+4. Claude will automatically:
+   - Load the spec workflow system prompt
+   - Delegate work to specialized agents (requirements, design, tasks)
+   - Process each phase in parallel with dedicated context windows
+5. Review outputs as agents complete their work
+
+<p align="center">
+  <img src="screenshots/new-spec-with-agents.png" width="600" alt="New Spec with Agents">
+</p>
+
+> **Note**: Sub agents may occasionally experience longer execution times due to a known bug. To maintain compatibility, both the original (`+` button) and new Sub Agent methods are available. The traditional method remains stable if you encounter any issues.
+
 ## Features
 
 ### 📝 SPEC Management
@@ -119,18 +136,6 @@ Replace `{latest-version}` with the actual version number, e.g., `0.1.5`.
 4. Claude will generate the requirements document
 5. Review and approve before proceeding to design
 6. Generate tasks after design is complete
-
-**NEW: Using Sub Agents (Recommended):**
-1. Click the Kiro for CC icon in the activity bar
-2. In the SPEC view header, click the "New Spec with Agents" button (with sparkle icon ✨)
-3. Enter a feature description
-4. Claude will automatically:
-   - Load the spec workflow system prompt
-   - Delegate work to specialized agents (requirements, design, tasks)
-   - Process each phase in parallel with dedicated context windows
-5. Review outputs as agents complete their work
-
-> **Note**: Sub agents may occasionally experience longer execution times due to a known bug. To maintain compatibility, both the original (`+` button) and new Sub Agent methods are available. The traditional method remains stable if you encounter any issues.
 
 ### Spec Workflow
 
