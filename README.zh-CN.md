@@ -3,6 +3,10 @@
 [![Visual Studio Marketplace](https://img.shields.io/vscode-marketplace/v/heisebaiyun.kiro-for-cc.svg)](https://marketplace.visualstudio.com/items?itemName=heisebaiyun.kiro-for-cc)
 [![Downloads](https://img.shields.io/vscode-marketplace/d/heisebaiyun.kiro-for-cc.svg)](https://marketplace.visualstudio.com/items?itemName=heisebaiyun.kiro-for-cc)
 
+> [!IMPORTANT]
+> **🎉 重要更新：Sub Agent 版本已上线！**  
+> 现在支持通过 Sub Agent 功能增强 Claude Code 的工作流程能力。使用专门的 agent 进行需求、设计和任务的并行处理来创建规范。
+
 为 Claude Code 带来规范驱动开发的 VSCode 扩展。在充分利用 Claude Code 强大 AI 能力的同时，可视化管理你的规范文档和指导文档。
 
 ## 功能特性
@@ -12,6 +16,13 @@
 - **创建规范**：在 Claude 的帮助下生成需求、设计和任务文档
 - **可视化浏览器**：在侧边栏中浏览和管理规范
 - **规范工作流**：需求 → 设计 → 任务，每步都需审查确认
+- **新功能：Sub Agent 支持**：使用专门的 agent 进行并行处理来创建规范
+
+### 🤖 AGENT 管理
+
+- **用户和项目 Agent**：查看和管理用户级和项目级的 Claude Code agent
+- **内置 Agent**：预配置的规范工作流 agent（需求、设计、任务、评审等）
+- **Agent 浏览器**：使用语法高亮浏览和编辑 agent 配置
 
 ### 🎯 STEERING 管理
 
@@ -99,12 +110,25 @@ cursor --install-extension kiro-for-cc-{latest-version}.vsix
 
 ### 创建规范
 
+**传统方法：**
 1. 点击活动栏中的 Kiro for CC 图标
 2. 在 SPEC 视图中，点击 `+` 按钮
 3. 输入功能描述
 4. Claude 将生成需求文档
 5. 审查并批准后再继续设计
 6. 设计完成后再生成任务
+
+**新功能：使用 Sub Agent（推荐）：**
+1. 点击活动栏中的 Kiro for CC 图标
+2. 在 SPEC 视图右上角，点击 "New Spec with Agents" 按钮（带闪光图标 ✨）
+3. 输入功能描述
+4. Claude 将自动：
+   - 加载规范工作流系统提示
+   - 将工作委派给专门的 agent（需求、设计、任务）
+   - 使用独立的上下文窗口并行处理每个阶段
+5. 随着 agent 完成工作，审查输出结果
+
+> **注意**：Sub Agent 目前会出现执行时间偶尔很长的 bug。为了兼容原有功能，保留了两种方式：点击原有的 `+` 按钮仍使用旧版方式，新的 Sub Agent 按钮使用新方式。目前测试下来两者不会冲突，但可能会遇到问题。
 
 ### 规范工作流
 
@@ -163,6 +187,15 @@ cursor --install-extension kiro-for-cc-{latest-version}.vsix
 │       ├── requirements.md   # 构建什么
 │       ├── design.md        # 如何构建
 │       └── tasks.md         # 实施步骤
+├── agents/                  # Claude Code agents
+│   └── kfc/                 # 内置 agents（自动初始化）
+│       ├── spec-requirements.md
+│       ├── spec-design.md
+│       ├── spec-tasks.md
+│       ├── spec-judge.md
+│       ├── spec-impl.md
+│       ├── spec-test.md
+│       └── spec-system-prompt-loader.md
 ├── steering/                # AI 指导文档
 │   ├── product.md          # 产品规范
 │   ├── tech.md            # 技术标准
@@ -220,18 +253,26 @@ src/
 ├── features/                 # 业务逻辑
 │   ├── spec/
 │   │   └── specManager.ts    # 规范生命周期管理
-│   └── steering/
-│       └── steeringManager.ts # 指导文档管理
+│   ├── steering/
+│   │   └── steeringManager.ts # 指导文档管理
+│   └── agents/
+│       └── agentManager.ts   # Agent 初始化和管理
 ├── providers/                # VSCode 树形视图提供者
 │   ├── claudeCodeProvider.ts # Claude CLI 集成
 │   ├── specExplorerProvider.ts
 │   ├── steeringExplorerProvider.ts
+│   ├── agentsExplorerProvider.ts    # 新增：Agent 浏览器
 │   ├── hooksExplorerProvider.ts
 │   ├── mcpExplorerProvider.ts
 │   └── overviewProvider.ts
 ├── prompts/                  # AI 提示词模板
 │   ├── specPrompts.ts        # 规范生成提示词
-│   └── steeringPrompts.ts    # 指导文档提示词
+│   ├── steeringPrompts.ts    # 指导文档提示词
+│   └── spec/
+│       └── create-spec-with-agents.md # 新增：Sub agent 工作流
+├── resources/                # 内置资源
+│   ├── agents/              # 预配置的 agents
+│   └── prompts/             # 系统提示词
 └── utils/
     └── configManager.ts      # 配置管理
 ```

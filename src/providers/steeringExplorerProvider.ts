@@ -8,6 +8,7 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
     readonly onDidChangeTreeData: vscode.Event<SteeringItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
     private steeringManager!: SteeringManager;
+    private isLoading: boolean = false;
 
     constructor(private context: vscode.ExtensionContext) {
         // We'll set the steering manager later from extension.ts
@@ -18,7 +19,14 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
     }
 
     refresh(): void {
-        this._onDidChangeTreeData.fire();
+        this.isLoading = true;
+        this._onDidChangeTreeData.fire(); // Show loading state immediately
+        
+        // Simulate async loading
+        setTimeout(() => {
+            this.isLoading = false;
+            this._onDidChangeTreeData.fire(); // Show actual content
+        }, 100);
     }
 
     getTreeItem(element: SteeringItem): vscode.TreeItem {
@@ -27,8 +35,20 @@ export class SteeringExplorerProvider implements vscode.TreeDataProvider<Steerin
 
     async getChildren(element?: SteeringItem): Promise<SteeringItem[]> {
         if (!element) {
-            // Root level - show CLAUDE.md files directly
+            // Root level - show loading state or CLAUDE.md files
             const items: SteeringItem[] = [];
+
+            if (this.isLoading) {
+                // Show loading state
+                items.push(new SteeringItem(
+                    'Loading steering documents...',
+                    vscode.TreeItemCollapsibleState.None,
+                    'steering-loading',
+                    '',  // resourcePath
+                    this.context
+                ));
+                return items;
+            }
 
             // Check existence of files
             const globalClaudeMd = path.join(process.env.HOME || '', '.claude', 'CLAUDE.md');
@@ -164,7 +184,10 @@ class SteeringItem extends vscode.TreeItem {
         super(label, collapsibleState);
 
         // Set appropriate icons based on type
-        if (contextValue === 'claude-md-global') {
+        if (contextValue === 'steering-loading') {
+            this.iconPath = new vscode.ThemeIcon('sync~spin');
+            this.tooltip = 'Loading steering documents...';
+        } else if (contextValue === 'claude-md-global') {
             this.iconPath = new vscode.ThemeIcon('globe');
             this.tooltip = `Global CLAUDE.md: ${resourcePath}`;
             this.description = '~/.claude/CLAUDE.md';

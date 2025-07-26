@@ -5,6 +5,10 @@
 
 [中文版](./README.zh-CN.md)
 
+> [!IMPORTANT]
+> **🎉 New: Sub Agent Support Now Available!**  
+> Enhanced Claude Code workflow capabilities through Sub Agent feature. Create specs with parallel processing using specialized agents for requirements, design, and tasks.
+
 A VSCode extension that brings spec-driven development to Claude Code. Manage your specs and steering documents visually while leveraging Claude Code's powerful AI capabilities.
 
 ## Features
@@ -14,6 +18,13 @@ A VSCode extension that brings spec-driven development to Claude Code. Manage yo
 - **Create Specs**: Generate requirements, design, and task documents with Claude's help
 - **Visual Explorer**: Browse and manage specs in the sidebar
 - **Spec Workflow**: Requirements → Design → Tasks with review at each step
+- **NEW: Sub Agent Support**: Create specs using specialized agents for parallel processing
+
+### 🤖 AGENT Management
+
+- **User & Project Agents**: View and manage Claude Code agents at user and project levels
+- **Built-in Agents**: Pre-configured spec workflow agents (requirements, design, tasks, judge, etc.)
+- **Agent Explorer**: Browse and edit agent configurations with syntax highlighting
 
 ### 🎯 STEERING Management
 
@@ -101,12 +112,25 @@ Replace `{latest-version}` with the actual version number, e.g., `0.1.5`.
 
 ### Creating a Spec
 
+**Traditional Method:**
 1. Click the Kiro for CC icon in the activity bar
 2. In the SPEC view, click the `+` button
 3. Enter a feature description
 4. Claude will generate the requirements document
 5. Review and approve before proceeding to design
 6. Generate tasks after design is complete
+
+**NEW: Using Sub Agents (Recommended):**
+1. Click the Kiro for CC icon in the activity bar
+2. In the SPEC view header, click the "New Spec with Agents" button (with sparkle icon ✨)
+3. Enter a feature description
+4. Claude will automatically:
+   - Load the spec workflow system prompt
+   - Delegate work to specialized agents (requirements, design, tasks)
+   - Process each phase in parallel with dedicated context windows
+5. Review outputs as agents complete their work
+
+> **Note**: Sub agents may occasionally experience longer execution times due to a known bug. To maintain compatibility, both the original (`+` button) and new Sub Agent methods are available. The traditional method remains stable if you encounter any issues.
 
 ### Spec Workflow
 
@@ -165,6 +189,15 @@ The extension creates the following structure in your workspace:
 │       ├── requirements.md   # What to build
 │       ├── design.md        # How to build
 │       └── tasks.md         # Implementation steps
+├── agents/                  # Claude Code agents
+│   └── kfc/                 # Built-in agents (auto-initialized)
+│       ├── spec-requirements.md
+│       ├── spec-design.md
+│       ├── spec-tasks.md
+│       ├── spec-judge.md
+│       ├── spec-impl.md
+│       ├── spec-test.md
+│       └── spec-system-prompt-loader.md
 ├── steering/                # AI guidance documents
 │   ├── product.md          # Product conventions
 │   ├── tech.md             # Technical standards
@@ -222,18 +255,26 @@ src/
 ├── features/                 # Business logic
 │   ├── spec/
 │   │   └── specManager.ts    # Spec lifecycle management
-│   └── steering/
-│       └── steeringManager.ts # Steering document management
+│   ├── steering/
+│   │   └── steeringManager.ts # Steering document management
+│   └── agents/
+│       └── agentManager.ts   # Agent initialization and management
 ├── providers/                # VSCode TreeDataProviders
 │   ├── claudeCodeProvider.ts # Claude CLI integration
 │   ├── specExplorerProvider.ts
 │   ├── steeringExplorerProvider.ts
+│   ├── agentsExplorerProvider.ts    # NEW: Agent explorer
 │   ├── hooksExplorerProvider.ts
 │   ├── mcpExplorerProvider.ts
 │   └── overviewProvider.ts
 ├── prompts/                  # AI prompt templates
 │   ├── specPrompts.ts        # Spec generation prompts
-│   └── steeringPrompts.ts    # Steering doc prompts
+│   ├── steeringPrompts.ts    # Steering doc prompts
+│   └── spec/
+│       └── create-spec-with-agents.md # NEW: Sub agent workflow
+├── resources/                # Built-in resources
+│   ├── agents/              # Pre-configured agents
+│   └── prompts/             # System prompts
 └── utils/
     └── configManager.ts      # Configuration management
 ```

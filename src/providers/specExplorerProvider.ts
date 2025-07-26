@@ -8,6 +8,7 @@ export class SpecExplorerProvider implements vscode.TreeDataProvider<SpecItem> {
     
     private specManager!: SpecManager;
     private outputChannel: vscode.OutputChannel;
+    private isLoading: boolean = false;
     
     constructor(private context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
         // We'll set the spec manager later from extension.ts
@@ -19,7 +20,14 @@ export class SpecExplorerProvider implements vscode.TreeDataProvider<SpecItem> {
     }
     
     refresh(): void {
-        this._onDidChangeTreeData.fire();
+        this.isLoading = true;
+        this._onDidChangeTreeData.fire(); // Show loading state immediately
+        
+        // Simulate async loading
+        setTimeout(() => {
+            this.isLoading = false;
+            this._onDidChangeTreeData.fire(); // Show actual content
+        }, 100);
     }
     
     getTreeItem(element: SpecItem): vscode.TreeItem {
@@ -33,7 +41,21 @@ export class SpecExplorerProvider implements vscode.TreeDataProvider<SpecItem> {
         }
         
         if (!element) {
-            // Root level - show all specs
+            // Root level - show loading state or specs
+            const items: SpecItem[] = [];
+            
+            if (this.isLoading) {
+                // Show loading state
+                items.push(new SpecItem(
+                    'Loading specs...',
+                    vscode.TreeItemCollapsibleState.None,
+                    'spec-loading',
+                    this.context
+                ));
+                return items;
+            }
+            
+            // Show all specs
             const specs = await this.specManager.getSpecList();
             const specItems = specs.map(specName => new SpecItem(
                 specName,
@@ -112,7 +134,10 @@ class SpecItem extends vscode.TreeItem {
     ) {
         super(label, collapsibleState);
         
-        if (contextValue === 'spec') {
+        if (contextValue === 'spec-loading') {
+            this.iconPath = new vscode.ThemeIcon('sync~spin');
+            this.tooltip = 'Loading specs...';
+        } else if (contextValue === 'spec') {
             this.iconPath = new vscode.ThemeIcon('package');
             this.tooltip = `Spec: ${label}`;
         } else if (contextValue === 'spec-document') {

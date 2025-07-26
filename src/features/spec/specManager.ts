@@ -61,6 +61,42 @@ export class SpecManager {
         this.setupSpecFolderWatcher(workspaceFolder, terminal);
     }
 
+    async createWithAgents() {
+        // Get feature description only
+        const description = await vscode.window.showInputBox({
+            title: '✨ Create New Spec with Agents ✨',
+            prompt: 'This will use specialized subagents for creating requirements, design, and tasks',
+            placeHolder: 'Enter your idea to generate requirement, design, and task specs...',
+            ignoreFocusOut: false
+        });
+
+        if (!description) {
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        // Show notification immediately after user input
+        NotificationUtils.showAutoDismissNotification('Claude is creating your spec with specialized agents. Check the terminal for progress.');
+
+        // Use the specialized subagent prompt
+        const prompt = this.promptLoader.renderPrompt('create-spec-with-agents', {
+            description,
+            workspacePath: workspaceFolder.uri.fsPath,
+            specBasePath: this.getSpecBasePath()
+        });
+
+        // Send to Claude and get the terminal
+        const terminal = await this.claudeProvider.invokeClaudeSplitView(prompt, 'KFC - Creating Spec (Agents)');
+
+        // Set up automatic terminal renaming when spec folder is created
+        this.setupSpecFolderWatcher(workspaceFolder, terminal);
+    }
+
     /**
      * Set up a file system watcher to automatically rename the terminal 
      * when a new spec folder is created

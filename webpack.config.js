@@ -4,6 +4,7 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const CopyPlugin = require('copy-webpack-plugin');
 
 /**@type {import('webpack').Configuration}*/
 const extensionConfig = {
@@ -41,6 +42,13 @@ const extensionConfig = {
   infrastructureLogging: {
     level: "log", // 启用日志
   },
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        { from: 'src/resources', to: 'resources' }
+      ]
+    })
+  ]
 };
 
 module.exports = [ extensionConfig ];

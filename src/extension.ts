@@ -7,6 +7,8 @@ import { SteeringExplorerProvider } from './providers/steeringExplorerProvider';
 import { HooksExplorerProvider } from './providers/hooksExplorerProvider';
 import { MCPExplorerProvider } from './providers/mcpExplorerProvider';
 import { OverviewProvider } from './providers/overviewProvider';
+import { AgentsExplorerProvider } from './providers/agentsExplorerProvider';
+import { AgentManager } from './features/agents/agentManager';
 import { ConfigManager } from './utils/configManager';
 import { CONFIG_FILE_NAME, VSC_CONFIG_NAMESPACE } from './constants';
 import { PromptLoader } from './services/promptLoader';
@@ -18,6 +20,7 @@ let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
 let steeringManager: SteeringManager;
 let permissionManager: PermissionManager;
+let agentManager: AgentManager;
 export let outputChannel: vscode.OutputChannel;
 
 // 导出 getter 函数供其他模块使用
@@ -59,12 +62,17 @@ export async function activate(context: vscode.ExtensionContext) {
     specManager = new SpecManager(claudeCodeProvider, outputChannel);
     steeringManager = new SteeringManager(claudeCodeProvider, outputChannel);
 
+    // Initialize Agent Manager and agents
+    agentManager = new AgentManager(context, outputChannel);
+    await agentManager.initializeBuiltInAgents();
+
     // Register tree data providers
     const overviewProvider = new OverviewProvider(context);
     const specExplorer = new SpecExplorerProvider(context, outputChannel);
     const steeringExplorer = new SteeringExplorerProvider(context);
     const hooksExplorer = new HooksExplorerProvider(context);
     const mcpExplorer = new MCPExplorerProvider(context, outputChannel);
+    const agentsExplorer = new AgentsExplorerProvider(context, agentManager, outputChannel);
 
     // Set managers
     specExplorer.setSpecManager(specManager);
@@ -73,6 +81,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('kfc.views.overview', overviewProvider),
         vscode.window.registerTreeDataProvider('kfc.views.specExplorer', specExplorer),
+        vscode.window.registerTreeDataProvider('kfc.views.agentsExplorer', agentsExplorer),
         vscode.window.registerTreeDataProvider('kfc.views.steeringExplorer', steeringExplorer),
         vscode.window.registerTreeDataProvider('kfc.views.hooksStatus', hooksExplorer),
         vscode.window.registerTreeDataProvider('kfc.views.mcpServerStatus', mcpExplorer)
@@ -82,13 +91,13 @@ export async function activate(context: vscode.ExtensionContext) {
     const updateChecker = new UpdateChecker(context, outputChannel);
 
     // Register commands
-    registerCommands(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer, updateChecker);
+    registerCommands(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer, agentsExplorer, updateChecker);
 
     // Initialize default settings file if not exists
     await initializeDefaultSettings();
 
     // Set up file watchers
-    setupFileWatchers(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer);
+    setupFileWatchers(context, specExplorer, steeringExplorer, hooksExplorer, mcpExplorer, agentsExplorer);
 
     // Check for updates on startup
     updateChecker.checkForUpdates();
@@ -186,7 +195,7 @@ async function toggleViews() {
 }
 
 
-function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecExplorerProvider, steeringExplorer: SteeringExplorerProvider, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider, updateChecker: UpdateChecker) {
+function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecExplorerProvider, steeringExplorer: SteeringExplorerProvider, hooksExplorer: HooksExplorerProvider, mcpExplorer: MCPExplorerProvider, agentsExplorer: AgentsExplorerProvider, updateChecker: UpdateChecker) {
 
     // Permission commands
     context.subscriptions.push(
@@ -222,7 +231,16 @@ function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecEx
         }
     });
 
-    context.subscriptions.push(createSpecCommand);
+    const createSpecWithAgentsCommand = vscode.commands.registerCommand('kfc.spec.createWithAgents', async () => {
+        try {
+            await specManager.createWithAgents();
+        } catch (error) {
+            outputChannel.appendLine(`Error in createWithAgents: ${error}`);
+            vscode.window.showErrorMessage(`Failed to create spec with agents: ${error}`);
+        }
+    });
+
+    context.subscriptions.push(createSpecCommand, createSpecWithAgentsCommand);
 
     context.subscriptions.push(
         vscode.commands.registerCommand('kfc.spec.navigate.requirements', async (specName: string) => {
@@ -244,7 +262,6 @@ function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecEx
         vscode.commands.registerCommand('kfc.spec.refresh', async () => {
             outputChannel.appendLine('[Manual Refresh] Refreshing spec explorer...');
             specExplorer.refresh();
-            NotificationUtils.showAutoDismissNotification('Specs refreshed', 1000);
         })
     );
 
@@ -287,7 +304,36 @@ function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecEx
         vscode.commands.registerCommand('kfc.steering.refresh', async () => {
             outputChannel.appendLine('[Manual Refresh] Refreshing steering explorer...');
             steeringExplorer.refresh();
-            NotificationUtils.showAutoDismissNotification('Steering documents refreshed', 1000);
+        }),
+
+        // Agents commands
+        vscode.commands.registerCommand('kfc.agents.refresh', async () => {
+            outputChannel.appendLine('[Manual Refresh] Refreshing agents explorer...');
+            agentsExplorer.refresh();
+        })
+    );
+
+    // Add file save confirmation for agent files
+    context.subscriptions.push(
+        vscode.workspace.onWillSaveTextDocument(async (event) => {
+            const document = event.document;
+            const filePath = document.fileName;
+
+            // Check if this is an agent file
+            if (filePath.includes('.claude/agents/') && filePath.endsWith('.md')) {
+                // Show confirmation dialog
+                const result = await vscode.window.showWarningMessage(
+                    'Are you sure you want to save changes to this agent file?',
+                    { modal: true },
+                    'Save',
+                    'Cancel'
+                );
+
+                if (result !== 'Save') {
+                    // Cancel the save operation by waiting forever
+                    event.waitUntil(new Promise(() => { }));
+                }
+            }
         })
     );
 
@@ -401,7 +447,8 @@ function setupFileWatchers(
     specExplorer: SpecExplorerProvider,
     steeringExplorer: SteeringExplorerProvider,
     hooksExplorer: HooksExplorerProvider,
-    mcpExplorer: MCPExplorerProvider
+    mcpExplorer: MCPExplorerProvider,
+    agentsExplorer: AgentsExplorerProvider
 ) {
     // Watch for changes in .claude directory with debouncing
     const kfcWatcher = vscode.workspace.createFileSystemWatcher('**/.claude/**/*');

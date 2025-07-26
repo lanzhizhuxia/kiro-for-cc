@@ -39,6 +39,11 @@
           "when": "!(workbenchState == empty || workspaceFolderCount == 0) && config.kfc.views.specs.visible"
         },
         {
+          "id": "kfc.views.agentsExplorer",
+          "name": "Agents",
+          "when": "!(workbenchState == empty || workspaceFolderCount == 0) && config.kfc.views.agents.visible"
+        },
+        {
           "id": "kfc.views.steeringExplorer",
           "name": "Agent Steering",
           "when": "!(workbenchState == empty || workspaceFolderCount == 0) && config.kfc.views.steering.visible"
@@ -89,6 +94,12 @@
         "title": "Create New Spec",
         "category": "Kiro for CC",
         "icon": "$(plus)"
+      },
+      {
+        "command": "kfc.spec.createWithAgents",
+        "title": "New Spec with Agents",
+        "category": "Kiro for CC",
+        "icon": "$(sparkle)"
       },
       {
         "command": "kfc.steering.create",
@@ -175,6 +186,12 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "kfc.agents.refresh",
+        "title": "Refresh Agents",
+        "category": "Kiro for CC",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "kfc.help.open",
         "title": "Kiro Help",
         "category": "Kiro for CC",
@@ -212,9 +229,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "kfc.spec.refresh",
+          "command": "kfc.spec.createWithAgents",
           "when": "view == kfc.views.specExplorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "kfc.spec.refresh",
+          "when": "view == kfc.views.specExplorer",
+          "group": "navigation@3"
         },
         {
           "command": "kfc.steering.generateInitial",
@@ -239,6 +261,11 @@
         {
           "command": "kfc.hooks.refresh",
           "when": "view == kfc.views.hooksStatus",
+          "group": "navigation"
+        },
+        {
+          "command": "kfc.agents.refresh",
+          "when": "view == kfc.views.agentsExplorer",
           "group": "navigation"
         }
       ],
@@ -300,6 +327,11 @@
           "default": true,
           "description": "Show Specs view"
         },
+        "kfc.views.agents.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Agents view"
+        },
         "kfc.views.hooks.visible": {
           "type": "boolean",
           "default": true,
@@ -337,8 +369,10 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@types/js-yaml": "^4.0.9",
     "gray-matter": "^4.0.3",
-    "handlebars": "^4.7.8"
+    "handlebars": "^4.7.8",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
@@ -348,6 +382,7 @@
     "@types/node": "^20.x",
     "@types/vscode": "^1.84.0",
     "concurrently": "^9.2.0",
+    "copy-webpack-plugin": "^13.0.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.4.0",
     "ts-loader": "^9.5.2",
