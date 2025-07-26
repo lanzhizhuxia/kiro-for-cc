@@ -53,7 +53,7 @@ export class AgentManager {
             
             // Copy each built-in agent if it doesn't exist
             for (const agentName of this.BUILT_IN_AGENTS) {
-                const sourcePath = path.join(this.extensionPath, 'src/resources/agents', `${agentName}.md`);
+                const sourcePath = path.join(this.extensionPath, 'dist/resources/agents', `${agentName}.md`);
                 const targetPath = path.join(targetDir, `${agentName}.md`);
                 
                 try {
@@ -90,7 +90,7 @@ export class AgentManager {
         }
 
         const systemPromptDir = path.join(this.workspaceRoot, '.claude/system-prompts');
-        const sourcePath = path.join(this.extensionPath, 'src/resources/prompts', 'spec-workflow-starter.md');
+        const sourcePath = path.join(this.extensionPath, 'dist/resources/prompts', 'spec-workflow-starter.md');
         const targetPath = path.join(systemPromptDir, 'spec-workflow-starter.md');
 
         try {
