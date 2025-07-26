@@ -51,25 +51,18 @@ export class AgentManager {
             // Ensure target directory exists
             await vscode.workspace.fs.createDirectory(vscode.Uri.file(targetDir));
             
-            // Copy each built-in agent if it doesn't exist
+            // Copy each built-in agent (always overwrite to ensure latest version)
             for (const agentName of this.BUILT_IN_AGENTS) {
                 const sourcePath = path.join(this.extensionPath, 'dist/resources/agents', `${agentName}.md`);
                 const targetPath = path.join(targetDir, `${agentName}.md`);
                 
                 try {
-                    // Check if file already exists
-                    await vscode.workspace.fs.stat(vscode.Uri.file(targetPath));
-                    this.outputChannel.appendLine(`[AgentManager] Agent ${agentName} already exists, skipping`);
-                } catch {
-                    // File doesn't exist, copy it
-                    try {
-                        const sourceUri = vscode.Uri.file(sourcePath);
-                        const targetUri = vscode.Uri.file(targetPath);
-                        await vscode.workspace.fs.copy(sourceUri, targetUri);
-                        this.outputChannel.appendLine(`[AgentManager] Copied agent ${agentName}`);
-                    } catch (error) {
-                        this.outputChannel.appendLine(`[AgentManager] Failed to copy agent ${agentName}: ${error}`);
-                    }
+                    const sourceUri = vscode.Uri.file(sourcePath);
+                    const targetUri = vscode.Uri.file(targetPath);
+                    await vscode.workspace.fs.copy(sourceUri, targetUri, { overwrite: true });
+                    this.outputChannel.appendLine(`[AgentManager] Updated agent ${agentName}`);
+                } catch (error) {
+                    this.outputChannel.appendLine(`[AgentManager] Failed to copy agent ${agentName}: ${error}`);
                 }
             }
             
@@ -97,15 +90,9 @@ export class AgentManager {
             // Ensure directory exists
             await vscode.workspace.fs.createDirectory(vscode.Uri.file(systemPromptDir));
             
-            // Check if file exists
-            try {
-                await vscode.workspace.fs.stat(vscode.Uri.file(targetPath));
-                this.outputChannel.appendLine('[AgentManager] System prompt already exists, skipping');
-            } catch {
-                // File doesn't exist, copy it
-                await vscode.workspace.fs.copy(vscode.Uri.file(sourcePath), vscode.Uri.file(targetPath));
-                this.outputChannel.appendLine('[AgentManager] Copied system prompt');
-            }
+            // Always overwrite to ensure latest version
+            await vscode.workspace.fs.copy(vscode.Uri.file(sourcePath), vscode.Uri.file(targetPath), { overwrite: true });
+            this.outputChannel.appendLine('[AgentManager] Updated system prompt');
         } catch (error) {
             this.outputChannel.appendLine(`[AgentManager] Failed to initialize system prompt: ${error}`);
         }

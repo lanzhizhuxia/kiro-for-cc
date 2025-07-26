@@ -212,6 +212,8 @@ Note: output_suffix is only provided when multiple sub-agents are running in par
 
 ## **Important Constraints**
 
+- After parallel(>=2) sub-agent tasks (spec-requirements, spec-design, spec-tasks) are completed, the main thread MUST NOT directly read the generated content. Instead, it MUST immediately call spec-judge for evaluation. Only after spec-judge completes the scoring can the main thread read the evaluated result documents
+- After spec-judge returns the evaluation results, the main thread MUST tell the user the final selected document path
 - When you want the user to review a document in a phase, you MUST ask the user a question.
 - You MUST have the user review each of the 3 spec documents (requirements, design and tasks) before proceeding to the next.
 - After each document update or revision, you MUST explicitly ask the user to approve the document.
