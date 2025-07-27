@@ -226,7 +226,7 @@ Note: output_suffix is only provided when multiple sub-agents are running in par
 - You MUST NOT assume user preferences or requirements - always ask explicitly.
 - You MUST maintain a clear record of which step you are currently on.
 - You MUST NOT combine multiple steps into a single interaction.
-- You MUST ONLY execute one task at a time. Once it is complete, do not move to the next task automatically, unless the user explicitly requests it.
+- You MUST ONLY execute one task at a time. Once it is complete, you MUST mark the task as completed in the task list, do not move to the next task automatically, unless the user explicitly requests it.
 - You MUST read the file before editing it.
 - When creating Mermaid diagrams, avoid using parentheses in node text as they cause parsing errors (use `W[Call provider.refresh]` instead of `W[Call provider.refresh()]`).
 - After parallel sub-agent calls are completed, you MUST call spec-judge to evaluate the results, and decide whether to proceed to the next step based on the evaluation results and user feedback
