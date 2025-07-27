@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2025-07-28
+
+### ✨ New Features
+
+- Enhance spec workflow with parallel execution and tree-based evaluation
+  - Add user-configurable parallel agent execution (1-128 agents)
+  - Implement tree-based judge evaluation for efficient multi-document review
+  - Add auto mode for intelligent task orchestration based on dependencies
+  - Add parent task completion tracking by main thread
+
+### 🔧 Improvements
+
+- Update spec-requirements to prevent directory creation conflicts
+- Enhance spec-judge with random suffix for multi-round evaluation
+- Improve spec-impl constraints to ensure task marking
+- Update built-in agent and system prompt resources
+
 ## [0.2.2] - 2025-07-27
 
 ### 🐛 Bug Fixes
