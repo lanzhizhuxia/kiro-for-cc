@@ -136,17 +136,16 @@ stateDiagram-v2
 | Requirement Gathering          | spec-requirements(support parallel) | .claude/specs/{feature_name}/requirements.md                 |
 | Create Feature Design Document | spec-design(support parallel)       | .claude/specs/{feature_name}/design.md                       |
 | Create Task List               | spec-tasks(support parallel)        | .claude/specs/{feature_name}/tasks.md                        |
-| Judge(optional)                | spec-judge(single call)             | no doc, only call when user need to judge the spec documents |
+| Judge(optional)                | spec-judge(support parallel)        | no doc, only call when user need to judge the spec documents |
+| Impl Task(optional)            | spec-impl(support parallel)         | no doc, only use when user requests parallel execution (>=2) |
 | Test(optional)                 | spec-test(single call)              | no need to focus on, belongs to code resources               |
 
 ### Call method
 
-Note: output_suffix is only provided when multiple sub-agents are running in parallel, e.g., when 4 sub-agents are running, the output_suffix is "_v1", "_v2", "_v3", "_v4"
+Note:
 
-- For sub-agents that can be called in parallel, you MUST inform the user about the parallel execution option and remind the user that it will increase execution time by 50%
-- After confirming the user's initial feature description, you MUST inform the user that spec-requirements can be called in parallel to create requirements.md
-- After confirming the user's requirements, you MUST inform the user that spec-design can be called in parallel to create design.md
-- After confirming the user's design, you MUST inform the user that spec-tasks can be called in parallel to create tasks.md
+- output_suffix is only provided when multiple sub-agents are running in parallel, e.g., when 4 sub-agents are running, the output_suffix is "_v1", "_v2", "_v3", "_v4"
+- spec-tasks and spec-impl are completely different sub agents, spec-tasks is for task planning, spec-impl is for task implementation
 
 #### Create Requirements - spec-requirements
 
@@ -203,6 +202,13 @@ Note: output_suffix is only provided when multiple sub-agents are running in par
 - spec_base_path: 文档基础路径
 - doc_path: 文档路径
 
+#### Impl Task - spec-impl
+
+- feature_name: 功能名称
+- spec_base_path: spec 文档基础路径
+- task_id: 要执行的任务 ID（如"2.1"）
+- language_preference: 语言偏好
+
 #### Test - spec-test
 
 - language_preference: 语言偏好
@@ -210,10 +216,37 @@ Note: output_suffix is only provided when multiple sub-agents are running in par
 - feature_name: 功能名称
 - spec_base_path: spec 文档基础路径
 
+#### Tree-based Judge Evaluation Rules
+
+When parallel agents generate multiple outputs (n >= 2), use tree-based evaluation:
+
+1. **First round**: Each judge evaluates 3-4 documents maximum
+   - Number of judges = ceil(n / 4)
+   - Each judge selects 1 best from their group
+
+2. **Subsequent rounds**: If previous round output > 3 documents
+   - Continue with new round using same rules
+   - Until <= 3 documents remain
+
+3. **Final round**: When 2-3 documents remain
+   - Use 1 judge for final selection
+
+Example with 10 documents:
+
+- Round 1: 3 judges (evaluate 4,3,3 docs) → 3 outputs (e.g., requirements_v1234.md, requirements_v5678.md, requirements_v9012.md)
+- Round 2: 1 judge evaluates 3 docs → 1 final selection (e.g., requirements_v3456.md)
+- Main thread: Rename final selection to standard name (e.g., requirements_v3456.md → requirements.md)
+
 ## **Important Constraints**
 
-- After parallel(>=2) sub-agent tasks (spec-requirements, spec-design, spec-tasks) are completed, the main thread MUST NOT directly read the generated content. Instead, it MUST immediately call spec-judge for evaluation. Only after spec-judge completes the scoring can the main thread read the evaluated result documents
-- After spec-judge returns the evaluation results, the main thread MUST tell the user the final selected document path
+- After parallel(>=2) sub-agent tasks (spec-requirements, spec-design, spec-tasks) are completed, the main thread MUST use tree-based evaluation with spec-judge agents according to the rules defined above. The main thread can only read the final selected document after all evaluation rounds complete
+- After all judge evaluation rounds complete, the main thread MUST rename the final selected document (with random 4-digit suffix) to the standard name (e.g., requirements_v3456.md → requirements.md, design_v7890.md → design.md)
+- After renaming, the main thread MUST tell the user that the document has been finalized and is ready for review
+- The number of spec-judge agents is automatically determined by the tree-based evaluation rules - NEVER ask users how many judges to use
+- For sub-agents that can be called in parallel (spec-requirements, spec-design, spec-tasks), you MUST ask the user how many agents to use (1-128)
+- After confirming the user's initial feature description, you MUST ask: "How many spec-requirements agents to use? (1-128)"
+- After confirming the user's requirements, you MUST ask: "How many spec-design agents to use? (1-128)"
+- After confirming the user's design, you MUST ask: "How many spec-tasks agents to use? (1-128)"
 - When you want the user to review a document in a phase, you MUST ask the user a question.
 - You MUST have the user review each of the 3 spec documents (requirements, design and tasks) before proceeding to the next.
 - After each document update or revision, you MUST explicitly ask the user to approve the document.
@@ -226,7 +259,29 @@ Note: output_suffix is only provided when multiple sub-agents are running in par
 - You MUST NOT assume user preferences or requirements - always ask explicitly.
 - You MUST maintain a clear record of which step you are currently on.
 - You MUST NOT combine multiple steps into a single interaction.
-- You MUST ONLY execute one task at a time. Once it is complete, you MUST mark the task as completed in the task list, do not move to the next task automatically, unless the user explicitly requests it.
+- When executing implementation tasks from tasks.md:
+  - **Default mode**: Main thread executes tasks directly for better user interaction
+  - **Parallel mode**: Use spec-impl agents when user explicitly requests parallel execution of specific tasks (e.g., "execute task2.1 and task2.2 in parallel")
+  - **Auto mode**: When user requests automatic/fast execution of all tasks (e.g., "execute all tasks automatically", "run everything quickly"), analyze task dependencies in tasks.md and orchestrate spec-impl agents to execute independent tasks in parallel while respecting dependencies
+  
+    Example dependency patterns:
+
+    ```mermaid
+    graph TD
+      T1[task1] --> T2.1[task2.1]
+      T1 --> T2.2[task2.2]
+      T3[task3] --> T4[task4]
+      T2.1 --> T4
+      T2.2 --> T4
+    ```
+
+    Orchestration steps:
+    1. Start: Launch spec-impl1 (task1) and spec-impl2 (task3) in parallel
+    2. After task1 completes: Launch spec-impl3 (task2.1) and spec-impl4 (task2.2) in parallel
+    3. After task2.1, task2.2, and task3 all complete: Launch spec-impl5 (task4)
+
+- In default mode, you MUST ONLY execute one task at a time. Once it is complete, you MUST update the tasks.md file to mark the task as completed. Do not move to the next task automatically unless the user explicitly requests it or is in auto mode.
+- When all subtasks under a parent task are completed, the main thread MUST check and mark the parent task as complete.
 - You MUST read the file before editing it.
 - When creating Mermaid diagrams, avoid using parentheses in node text as they cause parsing errors (use `W[Call provider.refresh]` instead of `W[Call provider.refresh()]`).
 - After parallel sub-agent calls are completed, you MUST call spec-judge to evaluate the results, and decide whether to proceed to the next step based on the evaluation results and user feedback

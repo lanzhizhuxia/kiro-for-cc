@@ -73,7 +73,7 @@
       },
       {
         "view": "kfc.views.specExplorer",
-        "contents": "Build complex features with structured planning\n\n[$(plus) Create New Spec](command:kfc.spec.create)"
+        "contents": "Build complex features with structured planning\n\n[$(plus) Create New Spec](command:kfc.spec.create)\n\n[$(sparkle) Create New Spec With Agents](command:kfc.spec.createWithAgents)"
       },
       {
         "view": "kfc.views.hooksStatus",
