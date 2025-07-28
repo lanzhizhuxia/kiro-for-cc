@@ -97,6 +97,24 @@ export class SpecManager {
         this.setupSpecFolderWatcher(workspaceFolder, terminal);
     }
 
+    async implTask(taskFilePath: string, taskDescription: string) {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        // Show notification immediately after user input
+        NotificationUtils.showAutoDismissNotification('Claude is implementing your task. Check the terminal for progress.');
+
+        const prompt = this.promptLoader.renderPrompt('impl-task', {
+            taskFilePath,
+            taskDescription
+        });
+
+        await this.claudeProvider.invokeClaudeSplitView(prompt, 'KFC - Implementing Task');
+    }
+
     /**
      * Set up a file system watcher to automatically rename the terminal 
      * when a new spec folder is created

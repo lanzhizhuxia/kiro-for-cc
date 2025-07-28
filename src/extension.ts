@@ -15,6 +15,7 @@ import { PromptLoader } from './services/promptLoader';
 import { UpdateChecker } from './utils/updateChecker';
 import { PermissionManager } from './features/permission/permissionManager';
 import { NotificationUtils } from './utils/notificationUtils';
+import { SpecTaskCodeLensProvider } from './providers/specTaskCodeLensProvider';
 
 let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
@@ -103,6 +104,15 @@ export async function activate(context: vscode.ExtensionContext) {
     updateChecker.checkForUpdates();
     outputChannel.appendLine('Update check initiated');
 
+    // Register CodeLens provider for spec tasks
+    const specTaskCodeLensProvider = new SpecTaskCodeLensProvider();
+    context.subscriptions.push(
+        vscode.languages.registerCodeLensProvider(
+            { language: 'markdown', pattern: '**/.claude/specs/*/tasks.md' },
+            specTaskCodeLensProvider
+        )
+    );
+    outputChannel.appendLine('CodeLens provider for spec tasks registered');
 }
 
 async function initializeDefaultSettings() {
@@ -255,9 +265,20 @@ function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecEx
             await specManager.navigateToDocument(specName, 'tasks');
         }),
 
-        vscode.commands.registerCommand('kfc.spec.implementTask', async () => {
-            // Coming soon - show a friendly message instead of error
-            vscode.window.showInformationMessage('Task implementation feature coming soon!', 'OK');
+        vscode.commands.registerCommand('kfc.spec.implTask', async (documentUri: vscode.Uri, lineNumber: number, taskDescription: string) => {
+            outputChannel.appendLine(`[Task Execute] Line ${lineNumber + 1}: ${taskDescription}`);
+
+            // 更新任务状态为已完成
+            const document = await vscode.workspace.openTextDocument(documentUri);
+            const edit = new vscode.WorkspaceEdit();
+            const line = document.lineAt(lineNumber);
+            const newLine = line.text.replace('- [ ]', '- [x]');
+            const range = new vscode.Range(lineNumber, 0, lineNumber, line.text.length);
+            edit.replace(documentUri, range, newLine);
+            await vscode.workspace.applyEdit(edit);
+
+            // 使用 Claude Code 执行任务
+            await specManager.implTask(documentUri.fsPath, taskDescription);
         }),
         vscode.commands.registerCommand('kfc.spec.refresh', async () => {
             outputChannel.appendLine('[Manual Refresh] Refreshing spec explorer...');
@@ -465,6 +486,7 @@ function setupFileWatchers(
             steeringExplorer.refresh();
             hooksExplorer.refresh();
             mcpExplorer.refresh();
+            agentsExplorer.refresh();
         }, 1000); // Increase debounce time to 1 second
     };
 

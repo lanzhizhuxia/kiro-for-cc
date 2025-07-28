@@ -7,3 +7,4 @@ export { default as createCustomSteering } from './steering/create-custom-steeri
 export { default as deleteSteering } from './steering/delete-steering';
 export { default as initSteering } from './steering/init-steering';
 export { default as refineSteering } from './steering/refine-steering';
+export { default as implTask } from './spec/impl-task';

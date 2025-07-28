@@ -120,12 +120,6 @@
         "icon": "$(sparkle)"
       },
       {
-        "command": "kfc.spec.implementTask",
-        "title": "Implement Task",
-        "category": "Kiro for CC",
-        "icon": "$(play)"
-      },
-      {
         "command": "kfc.spec.delete",
         "title": "Delete Spec",
         "category": "Kiro for CC",
@@ -214,6 +208,11 @@
         "title": "Reset Permissions",
         "category": "Kiro for CC",
         "icon": "$(debug-restart)"
+      },
+      {
+        "command": "kfc.spec.implTask",
+        "title": "Implement Task",
+        "category": "Kiro for CC"
       }
     ],
     "menus": {
@@ -284,11 +283,6 @@
           "command": "kfc.steering.delete",
           "when": "view == kfc.views.steeringExplorer && viewItem == steering-document",
           "group": "7_modification"
-        },
-        {
-          "command": "kfc.spec.implementTask",
-          "when": "view == kfc.views.specExplorer && viewItem == spec-document-tasks",
-          "group": "inline"
         }
       ],
       "commandPalette": [
