@@ -45,7 +45,7 @@
         },
         {
           "id": "kfc.views.steeringExplorer",
-          "name": "Agent Steering",
+          "name": "Steering",
           "when": "!(workbenchState == empty || workspaceFolderCount == 0) && config.kfc.views.steering.visible"
         },
         {
@@ -55,7 +55,7 @@
         },
         {
           "id": "kfc.views.hooksStatus",
-          "name": "Agent Hooks",
+          "name": "Hooks",
           "when": "!(workbenchState == empty || workspaceFolderCount == 0) && config.kfc.views.hooks.visible"
         },
         {
