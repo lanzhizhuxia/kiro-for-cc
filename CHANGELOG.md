@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2025-07-28
+
+### ✨ New Features
+
+- Add task implementation support (Closes #4)
+  - Add CodeLens provider for spec tasks with "▶ Implement Task" button
+  - Create optimized impl-task prompt for intelligent code implementation
+  - Enable continuing task execution after session interruption
+  - Support starting new conversations with full spec context
+
+### 🔧 Improvements
+
+- Improve UI clarity by renaming "Agent Steering" to "Steering"
+- Enhance spec generation to place dependency diagrams at document end
+- Update impl-task prompt to require comprehensive unit tests
+- Configure proper VSCode debugging with launch.json and tasks.json
+- Fix .gitignore rules for VSCode configuration files
+
+### 🐛 Bug Fixes
+
+- Strengthen spec-system-prompt-loader agent to prevent irrelevant responses
+- Remove kfc agents from version control (moved to .gitignore)
+
 ## [0.2.3] - 2025-07-28
 
 ### ✨ New Features

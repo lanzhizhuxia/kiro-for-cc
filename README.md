@@ -123,7 +123,7 @@ code --install-extension kiro-for-cc-{latest-version}.vsix
 cursor --install-extension kiro-for-cc-{latest-version}.vsix
 ```
 
-Replace `{latest-version}` with the actual version number, e.g., `0.2.3`.
+Replace `{latest-version}` with the actual version number, e.g., `0.2.4`.
 
 ## Usage
 
