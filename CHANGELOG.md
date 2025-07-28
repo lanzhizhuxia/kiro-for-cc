@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2025-07-28
+
+### 🔧 Improvements
+
+- Update impl-task prompt to use spec-system-prompt-loader sub agent
+  - Modified step 1 in impl-task.md to explicitly call spec-system-prompt-loader sub agent
+  - This ensures proper context loading during task implementation
+  - Auto-generated target TypeScript file updated accordingly
+
 ## [0.2.4] - 2025-07-28
 
 ### ✨ New Features
