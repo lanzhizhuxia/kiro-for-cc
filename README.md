@@ -1,7 +1,9 @@
 # Kiro for Claude Code
 
-[![Visual Studio Marketplace](https://img.shields.io/vscode-marketplace/v/heisebaiyun.kiro-for-cc.svg)](https://marketplace.visualstudio.com/items?itemName=heisebaiyun.kiro-for-cc)
-[![Downloads](https://img.shields.io/vscode-marketplace/d/heisebaiyun.kiro-for-cc.svg)](https://marketplace.visualstudio.com/items?itemName=heisebaiyun.kiro-for-cc)
+[![Visual Studio Marketplace](https://img.shields.io/vscode-marketplace/v/heisebaiyun.kiro-for-cc.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=heisebaiyun.kiro-for-cc)
+[![Downloads](https://img.shields.io/vscode-marketplace/d/heisebaiyun.kiro-for-cc.svg?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=heisebaiyun.kiro-for-cc)
+[![GitHub stars](https://img.shields.io/github/stars/notdp/kiro-for-cc.svg?style=flat-square)](https://github.com/notdp/kiro-for-cc/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/notdp/kiro-for-cc.svg?style=flat-square)](https://github.com/notdp/kiro-for-cc/issues)
 
 [中文版](./README.zh-CN.md)
 
