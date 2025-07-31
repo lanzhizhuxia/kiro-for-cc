@@ -18,7 +18,8 @@ export class SpecTaskCodeLensProvider implements vscode.CodeLensProvider {
 
         const codeLenses: vscode.CodeLens[] = [];
         const text = document.getText();
-        const lines = text.split('\n');
+        // 使用正则分割，同时处理 Windows (CRLF) 和 Unix (LF) 换行符
+        const lines = text.split(/\r?\n/);
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];

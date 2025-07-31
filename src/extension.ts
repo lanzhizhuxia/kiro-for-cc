@@ -106,12 +106,23 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register CodeLens provider for spec tasks
     const specTaskCodeLensProvider = new SpecTaskCodeLensProvider();
-    context.subscriptions.push(
-        vscode.languages.registerCodeLensProvider(
-            { language: 'markdown', pattern: '**/.claude/specs/*/tasks.md' },
-            specTaskCodeLensProvider
-        )
+    
+    // 使用更明确的文档选择器
+    const selector: vscode.DocumentSelector = [
+        { 
+            language: 'markdown', 
+            pattern: '**/.claude/specs/*/tasks.md',
+            scheme: 'file'
+        }
+    ];
+    
+    const disposable = vscode.languages.registerCodeLensProvider(
+        selector,
+        specTaskCodeLensProvider
     );
+    
+    context.subscriptions.push(disposable);
+    
     outputChannel.appendLine('CodeLens provider for spec tasks registered');
 }
 
