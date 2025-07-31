@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2025-07-31
+
+### 🐛 Bug Fixes
+
+- Fix CodeLens "Start Task" button not showing in files with CRLF line endings (#13)
+  - Handle different line ending formats (CRLF/LF) during text splitting
+  - Remove redundant file watchers (VSCode handles CodeLens refresh automatically)
+  - Clean up debug logs and simplify code structure
+
+### 📚 Documentation
+
+- Add GitHub stars and issues badges with flat-square style to README
+
 ## [0.2.5] - 2025-07-28
 
 ### 🔧 Improvements
