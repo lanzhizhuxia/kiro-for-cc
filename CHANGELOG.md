@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - 2025-08-20
+
+### ✨ New Features
+
+- Add model inherit parameter to all spec agents (#23)
+  - All built-in spec agents now include `model: inherit` parameter
+  - Ensures spec agents use the same model as the parent session
+  - Improves consistency across the spec workflow
+
 ## [0.2.6] - 2025-07-31
 
 ### 🐛 Bug Fixes
