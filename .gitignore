@@ -18,4 +18,3 @@ coverage/
 *.snap.tmp
 .nyc_output/
 
-.claude/agents/kfc/
