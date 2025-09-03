@@ -78,8 +78,8 @@ export class ClaudeCodeProvider {
             // Create temp file with the prompt
             const promptFilePath = await this.createTempFile(prompt, 'prompt');
 
-            // Build the command - simple now, just claude with input redirection
-            let command = `claude --permission-mode bypassPermissions < "${promptFilePath}"`;
+            // Build the command - use command substitution instead of input redirection
+            let command = `claude --permission-mode bypassPermissions "$(cat "${promptFilePath}")"`;
 
             // Create a new terminal in the editor area (right side)
             const terminal = vscode.window.createTerminal({
@@ -169,8 +169,8 @@ export class ClaudeCodeProvider {
         // Create temp file with the prompt
         const promptFilePath = await this.createTempFile(prompt, 'background-prompt');
 
-        // Build command using file redirection
-        let commandLine = `claude --permission-mode bypassPermissions < "${promptFilePath}"`;
+        // Build command using command substitution instead of file redirection
+        let commandLine = `claude --permission-mode bypassPermissions "$(cat "${promptFilePath}")"`;
 
         // Create hidden terminal for background execution
         const terminal = vscode.window.createTerminal({
