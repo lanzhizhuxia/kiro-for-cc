@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.8] - 2025-09-03
+
+### 🐛 Bug Fixes
+
+- Fix "Raw mode is not supported" error when using Claude CLI (#3)
+  - Replace pipe input redirection with command substitution
+  - Resolves TTY issues in Claude CLI's interactive mode
+  - Fixes error that occurs when Ink library cannot access TTY environment through piped input
+
 ## [0.2.7] - 2025-08-20
 
 ### ✨ New Features
