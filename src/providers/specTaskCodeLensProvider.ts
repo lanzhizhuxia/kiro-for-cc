@@ -33,7 +33,7 @@ export class SpecTaskCodeLensProvider implements vscode.CodeLensProvider {
                 // 创建 CodeLens
                 const codeLens = new vscode.CodeLens(range, {
                     title: "▶ Start Task",
-                    tooltip: "点击执行此任务",
+                    tooltip: "Click to implement this task with Claude Code",
                     command: "kfc.spec.implTask",
                     arguments: [document.uri, i, taskDescription]
                 });
