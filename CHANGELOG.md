@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.9] - 2025-09-21
+
+### 🐛 Bug Fixes
+
+- Fix path normalization for custom specs directory
+  - Improve handling of user-configured specs directories
+  - Ensure proper path resolution across different operating systems
+
+- Fix missing "Start Task" button when specs directory is configured
+  - Resolve issue where CodeLens would not appear with custom specs paths
+  - Improve task button visibility detection
+
+- Translate Chinese text to English in spec agents and CodeLens
+  - Complete internationalization of spec agent prompts
+  - Ensure consistent English language in CodeLens UI elements
+  - Improve accessibility for international users
+
 ## [0.2.8] - 2025-09-03
 
 ### 🐛 Bug Fixes
