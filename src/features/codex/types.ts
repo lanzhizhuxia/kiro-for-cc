@@ -55,6 +55,9 @@ export interface TaskDescriptor {
 
   /** 用户提供的额外信息 */
   metadata?: Record<string, any>;
+
+  /** 是否重置会话（清除之前的上下文） */
+  resetSession?: boolean;
 }
 
 
@@ -206,6 +209,9 @@ export interface ExecutionOptions {
 
   /** 是否在后台运行 */
   runInBackground?: boolean;
+
+  /** 推理深度控制（low=快速，medium=平衡，high=深度思考） */
+  reasoningEffort?: 'low' | 'medium' | 'high';
 
   /** 自定义配置 */
   customConfig?: Record<string, any>;

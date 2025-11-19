@@ -166,6 +166,10 @@ export class CodexExecutor implements ICodexExecutor {
   private reconnectAttempts = 0;
   private isReconnecting = false;
 
+  /** 连接初始化锁 - 防止并发初始化 */
+  private connectionPromise?: Promise<void>;
+  private isConnecting = false;
+
   /** 会话状态管理器（可选，用于保存连接中断时的状态） */
   private sessionStateManager?: any;
 
@@ -425,10 +429,18 @@ export class CodexExecutor implements ICodexExecutor {
         model: 'gpt-5-codex',
         sandbox: 'danger-full-access',
         'approval-policy': 'on-failure',
-        prompt
+        prompt,
+        sessionId: context.sessionId, // 传递 sessionId，支持会话继续
+        reasoningEffort: context.options?.reasoningEffort || 'medium', // 推理深度控制
+        resetSession: context.task.resetSession // 是否重置会话
       };
 
-      this.outputChannel.appendLine(`[CodexExecutor] Calling Codex with task_marker: ${taskMarker}`);
+      this.outputChannel.appendLine(
+        `[CodexExecutor] Calling Codex with task_marker: ${taskMarker}, ` +
+        `sessionId: ${context.sessionId}, ` +
+        `reasoningEffort: ${toolParams.reasoningEffort}, ` +
+        `resetSession: ${toolParams.resetSession || false}`
+      );
 
       // 调用Codex工具
       const { result, session } = await this.mcpClient.callCodex(toolParams);
@@ -464,14 +476,41 @@ export class CodexExecutor implements ICodexExecutor {
    * 确保MCP客户端已连接
    *
    * 如果客户端未创建或未连接，则创建并连接
+   * 使用连接锁防止并发初始化（多个任务同时调用时共享同一个连接）
    *
    * @throws 如果连接失败
    */
   private async _ensureMCPClient(): Promise<void> {
+    // 如果已经连接，直接返回
     if (this.mcpClient && this.mcpClient.isConnected()) {
+      this.outputChannel.appendLine('[CodexExecutor] MCP client already connected');
       return;
     }
 
+    // 如果正在连接，等待连接完成
+    if (this.isConnecting && this.connectionPromise) {
+      this.outputChannel.appendLine('[CodexExecutor] Waiting for ongoing connection...');
+      await this.connectionPromise;
+      return;
+    }
+
+    // 设置连接标志，防止其他任务同时初始化
+    this.isConnecting = true;
+    this.connectionPromise = this._doConnect();
+
+    try {
+      await this.connectionPromise;
+    } finally {
+      this.isConnecting = false;
+      this.connectionPromise = undefined;
+    }
+  }
+
+  /**
+   * 执行实际的连接操作
+   * @private
+   */
+  private async _doConnect(): Promise<void> {
     this.outputChannel.appendLine('[CodexExecutor] Creating MCP client...');
 
     // 创建MCP客户端 - 使用配置的 codex-mcp-server
@@ -490,7 +529,9 @@ export class CodexExecutor implements ICodexExecutor {
     );
 
     // 连接到MCP服务器
+    this.outputChannel.appendLine('[CodexExecutor] Connecting to MCP server...');
     await this.mcpClient.connect();
+    this.outputChannel.appendLine('[CodexExecutor] MCP client connected successfully');
   }
 
   /**

@@ -288,10 +288,18 @@ export class MCPClient implements IMCPClient {
       this.outputChannel.appendLine(`[MCPClient] Params: ${JSON.stringify(params, null, 2)}`);
 
       // 调用工具 - 直接使用原始工具名，不加前缀
-      const response = await this.client.callTool({
-        name: 'codex',
-        arguments: params as Record<string, unknown>
-      });
+      // 设置超时为10分钟（600秒）以支持极端复杂任务
+      // 注意：超时后重试会从头开始，所以给足时间很重要
+      const response = await this.client.callTool(
+        {
+          name: 'codex',
+          arguments: params as Record<string, unknown>
+        },
+        undefined, // resultSchema
+        {
+          timeout: 600000 // 10分钟超时
+        }
+      );
 
       this.outputChannel.appendLine(`[MCPClient] Tool response: ${JSON.stringify(response, null, 2)}`);
 
@@ -344,11 +352,17 @@ export class MCPClient implements IMCPClient {
       this.outputChannel.appendLine('[MCPClient] Calling mcp__codex__codex-reply tool...');
       this.outputChannel.appendLine(`[MCPClient] Params: ${JSON.stringify(params, null, 2)}`);
 
-      // 调用工具
-      const response = await this.client.callTool({
-        name: 'mcp__codex-cli__codex-reply',
-        arguments: params as Record<string, unknown>
-      });
+      // 调用工具 - 设置超时为10分钟
+      const response = await this.client.callTool(
+        {
+          name: 'mcp__codex-cli__codex-reply',
+          arguments: params as Record<string, unknown>
+        },
+        undefined, // resultSchema
+        {
+          timeout: 600000 // 10分钟超时
+        }
+      );
 
       this.outputChannel.appendLine(`[MCPClient] Tool response: ${JSON.stringify(response, null, 2)}`);
 
