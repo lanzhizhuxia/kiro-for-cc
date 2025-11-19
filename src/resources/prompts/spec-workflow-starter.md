@@ -286,6 +286,28 @@ Example with 10 documents:
   - **Default mode**: Main thread executes tasks directly for better user interaction
   - **Parallel mode**: Use spec-impl agents when user explicitly requests parallel execution of specific tasks (e.g., "execute task2.1 and task2.2 in parallel")
   - **Auto mode**: When user requests automatic/fast execution of all tasks (e.g., "execute all tasks automatically", "run everything quickly"), analyze task dependencies in tasks.md and orchestrate spec-impl agents to execute independent tasks in parallel while respecting dependencies
+  - **Codex delegation mode**: When user explicitly requests delegating tasks to Codex (e.g., "让 Codex 实现任务3", "用 Codex 执行任务5"), use the VSCode command `kfc.codex.delegateSamTask` to execute tasks via Codex MCP server
+
+    **Task execution tags in tasks.md**:
+    - `[codex]` - Force task to be executed by Codex (100% confidence)
+    - `[manual]` - Force task to require manual implementation (skip Codex)
+    - `[skip]` - Skip this task entirely
+
+    **When to use Codex**:
+    - User explicitly requests: "让 Codex 实现任务X" or similar phrases
+    - Task is tagged with `[codex]` in tasks.md
+    - User asks to delegate specific tasks to Codex
+
+    **How to delegate to Codex**:
+    1. Identify the task number user wants to execute (e.g., "1.2", "3")
+    2. Guide user to run VSCode command: "Please run command: Kiro: Delegate Sam Task to Codex"
+    3. Or inform user they can mark tasks with `[codex]` tag in tasks.md for automatic Codex execution
+
+    **Do NOT use Codex for**:
+    - Documentation tasks (marked as 'documentation' type or containing keywords like '文档', 'doc', 'readme')
+    - Complex refactoring tasks (>70 complexity score)
+    - UI/UX subjective tasks (containing keywords like '美观', '体验', 'beautiful')
+    - Tasks explicitly tagged with `[manual]` or `[skip]`
   
     Example dependency patterns:
 
