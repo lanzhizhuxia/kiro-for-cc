@@ -388,24 +388,6 @@ Design document to analyze: ${specName}`,
                 const analysisPath = designPath.replace('.md', '-codex-analysis.md');
                 await this._saveAnalysisResult(analysisPath, result);
 
-                // 5b. Show analysis result in WebView (if deep thinking result is available)
-                if (result.thinkingSummary) {
-                    this.outputChannel.appendLine(`[SpecManager] Showing analysis result in WebView`);
-
-                    // Prepare metadata
-                    const metadata = {
-                        sessionId: result.sessionId,
-                        mode: result.mode,
-                        executionTime: result.duration,
-                        timestamp: result.endTime.toISOString()
-                    };
-
-                    // Show WebView
-                    await this.codexOrchestrator.showAnalysisResult(
-                        result.thinkingSummary,
-                        metadata
-                    );
-                }
 
                 // 5c. Show result notification
                 const choice = await vscode.window.showInformationMessage(
@@ -551,18 +533,6 @@ ${markdown}`;
      */
     private _formatAnalysisAsMarkdown(result: ExecutionResult): string {
         let md = `# Codex Deep Analysis Result\n\n`;
-
-        // Add thinking result if available
-        if (result.thinkingSummary) {
-            md += `## Problem Decomposition\n\n${this._formatProblemDecomposition(result.thinkingSummary.problemDecomposition)}\n\n`;
-            md += `## Risk Identification\n\n${this._formatRisks(result.thinkingSummary.riskIdentification)}\n\n`;
-
-            if (result.thinkingSummary.solutionComparison && result.thinkingSummary.solutionComparison.length > 0) {
-                md += `## Solution Comparison\n\n${this._formatSolutions(result.thinkingSummary.solutionComparison)}\n\n`;
-            }
-
-            md += `## Recommended Decision\n\n${this._formatDecision(result.thinkingSummary.recommendedDecision)}\n\n`;
-        }
 
         // Add output if available
         if (result.output) {

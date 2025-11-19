@@ -2,22 +2,18 @@
  * Codex执行器
  *
  * 负责执行Codex任务，管理与MCP服务器的通信，处理执行上下文和结果。
- * 集成MCPLifecycleManager确保MCP服务器在执行前已启动并就绪。
  *
  * @module codexExecutor
  */
 
 import * as vscode from 'vscode';
-import { MCPLifecycleManager } from './mcpLifecycleManager';
 import { MCPClient, CodexToolParams, CodexReplyToolParams } from './mcpClient';
 import {
   TaskDescriptor,
   ExecutionResult,
   Session,
   ExecutionOptions,
-  MCPServerStatus,
-  CodebaseSnapshot,
-  ComplexityScore
+  MCPServerStatus
 } from './types';
 import { ExecutionLogger } from './executionLogger';
 
@@ -94,12 +90,6 @@ export interface ExecutionContext {
   /** 会话ID */
   sessionId: string;
 
-  /** 代码库快照（可选） */
-  codebaseSnapshot?: CodebaseSnapshot;
-
-  /** 复杂度评分（可选） */
-  complexityScore?: ComplexityScore;
-
   /** 执行选项 */
   options?: ExecutionOptions;
 
@@ -138,10 +128,9 @@ export interface ICodexExecutor {
  *
  * 核心功能：
  * - 管理与MCP服务器的通信
- * - 准备执行上下文（任务信息、代码库快照、复杂度评分）
+ * - 准备执行上下文（任务信息）
  * - 发送MCP请求并处理响应
  * - 转换响应为标准化的执行结果
- * - 集成MCPLifecycleManager确保服务器就绪
  *
  * @example
  * ```typescript
@@ -151,9 +140,6 @@ export interface ICodexExecutor {
  * ```
  */
 export class CodexExecutor implements ICodexExecutor {
-  /** MCP生命周期管理器 */
-  private mcpManager: MCPLifecycleManager;
-
   /** MCP客户端 */
   private mcpClient?: MCPClient;
 
@@ -196,7 +182,6 @@ export class CodexExecutor implements ICodexExecutor {
     sessionStateManager?: any
   ) {
     this.outputChannel = outputChannel;
-    this.mcpManager = new MCPLifecycleManager(outputChannel);
     this.activeRequests = new Map();
     this.sessionStateManager = sessionStateManager;
   }
@@ -243,8 +228,6 @@ export class CodexExecutor implements ICodexExecutor {
       this.logger.logInfo('Preparing execution context');
       const context = await this.prepareContext(task);
       context.sessionId = session.id;
-      context.codebaseSnapshot = session.context?.codebaseSnapshot;
-      context.complexityScore = session.context?.complexityScore;
       context.options = session.context?.options;
 
       // 4. 发送MCP请求
@@ -252,9 +235,7 @@ export class CodexExecutor implements ICodexExecutor {
       this.logger.logMCPRequest('callCodex', {
         taskId: task.id,
         taskType: task.type,
-        sessionId: session.id,
-        hasCodebaseSnapshot: !!context.codebaseSnapshot,
-        complexityScore: context.complexityScore
+        sessionId: session.id
       });
 
       const response = await this._sendMCPRequest(context);
@@ -371,7 +352,11 @@ export class CodexExecutor implements ICodexExecutor {
    * @returns MCP服务器状态
    */
   async checkServerStatus(): Promise<MCPServerStatus> {
-    return this.mcpManager.getStatus();
+    return {
+      status: this.mcpClient ? 'running' : 'stopped',
+      healthCheckFailures: 0,
+      isHealthy: !!this.mcpClient
+    };
   }
 
   /**
@@ -387,8 +372,6 @@ export class CodexExecutor implements ICodexExecutor {
       await this.mcpClient.disconnect();
       this.mcpClient = undefined;
     }
-
-    await this.mcpManager.stop();
   }
 
   /**
@@ -572,26 +555,6 @@ export class CodexExecutor implements ICodexExecutor {
         parts.push(context.customContext.tasks);
         parts.push('');
       }
-    }
-
-    // 添加复杂度信息
-    if (context.complexityScore) {
-      parts.push('# Complexity Analysis');
-      parts.push(`Total Score: ${context.complexityScore.total}/10`);
-      parts.push(`Code Scale: ${context.complexityScore.codeScale}/10`);
-      parts.push(`Technical Difficulty: ${context.complexityScore.technicalDifficulty}/10`);
-      parts.push(`Business Impact: ${context.complexityScore.businessImpact}/10`);
-      parts.push('');
-    }
-
-    // 添加代码库快照信息
-    if (context.codebaseSnapshot) {
-      parts.push('# Codebase Snapshot');
-      parts.push(`Files: ${context.codebaseSnapshot.files.length}`);
-      if (context.codebaseSnapshot.externalDependencies) {
-        parts.push(`External Dependencies: ${context.codebaseSnapshot.externalDependencies.length}`);
-      }
-      parts.push('');
     }
 
     return parts.join('\n');
@@ -919,9 +882,6 @@ export class CodexExecutor implements ICodexExecutor {
       await this.mcpClient.disconnect();
       this.mcpClient = undefined;
     }
-
-    // 停止MCP服务器
-    await this.mcpManager.stop();
 
     this.outputChannel.appendLine('[CodexExecutor] Executor disposed');
   }

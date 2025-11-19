@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2025-11-19
+
+### 🧹 Major Cleanup: Removed Unused Codex Code
+
+This release removes ~2600 lines (~48%) of unused Codex workflow code to improve maintainability and reduce bundle size.
+
+#### Changes
+
+1. **Deleted Unused Components** (~2600 lines removed)
+   - Removed `TaskRouter` (智能任务路由) - never called due to hardcoded `forceMode: 'codex'`
+   - Removed `ComplexityAnalyzer` (复杂度分析器) - unused without TaskRouter
+   - Removed `DeepThinkingEngine` (深度推理引擎) - disabled via hardcoded `enableDeepThinking: false`
+   - Removed `CodebaseAnalyzer` (代码库分析器) - had TODO comments, not implemented
+   - Removed `SecurityGuard` (安全守卫) - never imported or called
+   - Removed `PreferenceTracker` (偏好学习) - no user feedback UI
+   - Removed `FeedbackCollector` (反馈收集器) - no UI implemented
+   - Removed `CodexAnalysisWebview` (WebView展示) - unused without DeepThinkingEngine
+   - Removed `TaskCodeLensProvider` (任务CodeLens) - unused UI component
+   - Removed `MCPLifecycleManager` - functionality integrated into MCPClient
+   - Removed `LocalAgentExecutor` - never used (always forced to Codex mode)
+   - Removed all test files for deleted components
+
+2. **Simplified Core Components**
+   - Simplified `CodexOrchestrator` - removed routing, deep thinking, WebView integration
+   - Simplified `types.ts` - removed unused type definitions (ComplexityScore, ThinkingResult, ModeRecommendation, AnalysisContext, CodebaseSnapshot, etc.)
+   - Updated `codexExecutor.ts` - removed references to deleted managers
+   - Updated `sessionStateManager.ts` - removed unused context properties
+   - Updated `specManager.ts` - removed WebView and thinking summary code
+
+3. **Impact**
+   - Code reduced from ~5400 lines to ~2800 lines (48% reduction)
+   - Files reduced from 21 to 8 TypeScript files (62% reduction)
+   - Bundle size reduction: ~100KB (estimated)
+   - All working features preserved:
+     - ✅ Review Design with Codex
+     - ✅ Review Requirements with Codex
+     - ✅ Implement Task with Codex (Sam integration)
+
+4. **Breaking Changes**
+   - None - all deleted code was unused
+
 ## [0.4.0] - 2025-11-19
 
 ### ✨ Major Feature: Sam + Codex Integration

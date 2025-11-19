@@ -18,9 +18,7 @@ import {
   Session,
   TaskDescriptor,
   SessionCheckpoint,
-  ExecutionOptions,
-  ComplexityScore,
-  CodebaseSnapshot
+  ExecutionOptions
 } from './types';
 
 /**
@@ -197,43 +195,6 @@ export class SessionStateManager {
     this.outputChannel.appendLine(`[SessionStateManager] Saved state for session: ${session.id}`);
   }
 
-  /**
-   * 更新会话上下文
-   *
-   * @param sessionId 会话ID
-   * @param complexityScore 复杂度评分（可选）
-   * @param codebaseSnapshot 代码库快照（可选）
-   */
-  async updateContext(
-    sessionId: string,
-    complexityScore?: ComplexityScore,
-    codebaseSnapshot?: CodebaseSnapshot
-  ): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-
-    // 更新上下文
-    session.context = session.context || {};
-    if (complexityScore) {
-      session.context.complexityScore = complexityScore;
-    }
-    if (codebaseSnapshot) {
-      session.context.codebaseSnapshot = codebaseSnapshot;
-    }
-
-    // 更新最后活跃时间
-    session.lastActiveAt = new Date();
-
-    // 标记为脏数据
-    this.dirtySessionIds.add(sessionId);
-
-    // 持久化（强制立即持久化）
-    await this._persistSessions(true);
-
-    this.outputChannel.appendLine(`[SessionStateManager] Updated context for session: ${sessionId}`);
-  }
 
   /**
    * 创建会话检查点

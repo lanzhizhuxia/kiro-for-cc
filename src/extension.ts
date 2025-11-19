@@ -20,8 +20,6 @@ import { NotificationUtils } from './utils/notificationUtils';
 import { SpecTaskCodeLensProvider } from './providers/specTaskCodeLensProvider';
 import { SamManager } from './features/sam/samManager';
 import { CodexOrchestrator } from './features/codex/codexOrchestrator';
-import { TaskCodeLensProvider } from './features/codex/taskCodeLensProvider';
-import { handleExecuteTaskWithCodex, handleShowTaskDetails } from './features/codex/taskExecutionHandler';
 
 let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
@@ -168,52 +166,6 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 
     outputChannel.appendLine('CodeLens provider for spec tasks registered');
-
-    // Register Task CodeLens provider for Codex mode (T55)
-    if (codexOrchestrator) {
-        const taskCodeLensProvider = new TaskCodeLensProvider(outputChannel);
-
-        const taskCodeLensDisposable = vscode.languages.registerCodeLensProvider(
-            selector, // 使用相同的selector（tasks.md文档）
-            taskCodeLensProvider
-        );
-
-        context.subscriptions.push(taskCodeLensDisposable);
-
-        // Register Codex task execution commands
-        context.subscriptions.push(
-            vscode.commands.registerCommand(
-                'kfc.codex.executeTask',
-                async (taskNumber: string, taskTitle: string, docUri: vscode.Uri) => {
-                    await handleExecuteTaskWithCodex(
-                        taskNumber,
-                        taskTitle,
-                        docUri,
-                        codexOrchestrator!,
-                        outputChannel
-                    );
-                }
-            )
-        );
-
-        context.subscriptions.push(
-            vscode.commands.registerCommand(
-                'kfc.codex.showTaskDetails',
-                async (taskNumber: string, taskTitle: string, docUri: vscode.Uri) => {
-                    await handleShowTaskDetails(
-                        taskNumber,
-                        taskTitle,
-                        docUri,
-                        outputChannel
-                    );
-                }
-            )
-        );
-
-        outputChannel.appendLine('Task CodeLens provider for Codex mode registered');
-    } else {
-        outputChannel.appendLine('Task CodeLens provider skipped (Codex not available)');
-    }
 }
 
 async function initializeDefaultSettings() {
