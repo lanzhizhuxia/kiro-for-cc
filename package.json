@@ -499,6 +499,7 @@
     "setup:codex": "./scripts/setup-codex-mcp.sh",
     "setup-sam-config": "bash ./scripts/setup-sam-config.sh",
     "update-sam-config": "bash ./scripts/update-sam-config.sh",
+    "install-global-init": "bash ./scripts/install-global-init.sh",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
