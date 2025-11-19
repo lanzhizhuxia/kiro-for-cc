@@ -485,4 +485,240 @@ ${taskDescription}
       };
     }
   }
+
+  /**
+   * Auto-evaluate all tasks in a spec
+   * @param specName Spec name (optional, will prompt if not provided)
+   * @returns Evaluation results
+   */
+  async autoEvaluateTasks(specName?: string): Promise<any> {
+    try {
+      // 1. Get spec name if not provided
+      if (!specName) {
+        specName = await vscode.window.showInputBox({
+          prompt: 'Enter the spec name to evaluate tasks',
+          placeHolder: 'e.g., test-automation'
+        });
+
+        if (!specName) {
+          this.outputChannel.appendLine('[SamManager] User cancelled spec input');
+          return null;
+        }
+      }
+
+      // 2. Lazy import TaskEvaluator
+      const { TaskEvaluator } = await import('./automation/taskEvaluator');
+      const taskEvaluator = new TaskEvaluator(this.outputChannel);
+
+      // 3. Find tasks.md file
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        throw new Error('No workspace folder found');
+      }
+
+      const tasksPath = path.join(workspaceRoot, '.claude/specs', specName, 'tasks.md');
+
+      if (!fs.existsSync(tasksPath)) {
+        throw new Error(`Tasks file not found: ${tasksPath}`);
+      }
+
+      // 4. Load context (requirements and design) for evaluation
+      const reqPath = path.join(workspaceRoot, 'docs/specs', specName, 'requirements.md');
+      const designPath = path.join(workspaceRoot, 'docs/specs', specName, 'design.md');
+
+      const evalContext: { requirements?: string; design?: string } = {};
+
+      if (fs.existsSync(reqPath)) {
+        evalContext.requirements = fs.readFileSync(reqPath, 'utf-8');
+      }
+
+      if (fs.existsSync(designPath)) {
+        evalContext.design = fs.readFileSync(designPath, 'utf-8');
+      }
+
+      // 5. Parse and evaluate tasks
+      this.outputChannel.appendLine(`[SamManager] Evaluating tasks from: ${tasksPath}`);
+      const tasks = await taskEvaluator.parseTasks(tasksPath);
+      const evaluations = await taskEvaluator.evaluateAllTasks(tasks, evalContext);
+
+      // 6. Show summary
+      const codexTasks = evaluations.filter((e: any) => e.recommendCodex);
+      const manualTasks = evaluations.filter((e: any) => !e.recommendCodex);
+
+      const summary = `
+📊 任务评估完成
+
+总任务数: ${evaluations.length}
+推荐 Codex: ${codexTasks.length} 个
+推荐手动: ${manualTasks.length} 个
+
+详情见输出面板
+      `;
+
+      vscode.window.showInformationMessage(summary.trim());
+
+      // 7. Log detailed results
+      this.outputChannel.appendLine('\n=== 详细评估结果 ===');
+      evaluations.forEach((e: any) => {
+        this.outputChannel.appendLine(
+          `\n任务 ${e.task.number}: ${e.task.title}\n` +
+          `  类型: ${e.type}\n` +
+          `  复杂度: ${e.complexityScore}/100\n` +
+          `  推荐: ${e.recommendCodex ? 'Codex' : '手动'}\n` +
+          `  原因: ${e.reason}`
+        );
+      });
+
+      return evaluations;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.outputChannel.appendLine(`[SamManager] Error in autoEvaluateTasks: ${errorMsg}`);
+      vscode.window.showErrorMessage(`Failed to evaluate tasks: ${errorMsg}`);
+      return null;
+    }
+  }
+
+  /**
+   * Auto-implement tasks with Codex (batch processing)
+   * @param specName Spec name (optional, will prompt if not provided)
+   * @returns Automation report
+   */
+  async autoImplementTasks(specName?: string): Promise<any> {
+    try {
+      // 1. Check Codex availability
+      if (!this.codexOrchestrator) {
+        const error = 'Codex is not available. Please ensure Codex is configured.';
+        vscode.window.showErrorMessage(error);
+        return null;
+      }
+
+      // 2. Get spec name if not provided
+      if (!specName) {
+        specName = await vscode.window.showInputBox({
+          prompt: 'Enter the spec name to auto-implement tasks',
+          placeHolder: 'e.g., test-automation'
+        });
+
+        if (!specName) {
+          this.outputChannel.appendLine('[SamManager] User cancelled spec input');
+          return null;
+        }
+      }
+
+      // 3. Lazy import automation components
+      const { TaskEvaluator } = await import('./automation/taskEvaluator');
+      const { BatchTaskDelegator } = await import('./automation/batchTaskDelegator');
+
+      const taskEvaluator = new TaskEvaluator(this.outputChannel);
+      const batchDelegator = new BatchTaskDelegator(this.codexOrchestrator, this.outputChannel);
+
+      // 4. Find tasks.md file
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        throw new Error('No workspace folder found');
+      }
+
+      const tasksPath = path.join(workspaceRoot, '.claude/specs', specName, 'tasks.md');
+
+      if (!fs.existsSync(tasksPath)) {
+        throw new Error(`Tasks file not found: ${tasksPath}`);
+      }
+
+      // 5. Load context (requirements and design) first
+      const reqPath = path.join(workspaceRoot, 'docs/specs', specName, 'requirements.md');
+      const designPath = path.join(workspaceRoot, 'docs/specs', specName, 'design.md');
+
+      const context: { requirements?: string; design?: string } = {};
+
+      if (fs.existsSync(reqPath)) {
+        context.requirements = fs.readFileSync(reqPath, 'utf-8');
+        this.outputChannel.appendLine('[SamManager] Loaded requirements context');
+      }
+
+      if (fs.existsSync(designPath)) {
+        context.design = fs.readFileSync(designPath, 'utf-8');
+        this.outputChannel.appendLine('[SamManager] Loaded design context');
+      }
+
+      // 6. Parse and evaluate tasks
+      this.outputChannel.appendLine(`[SamManager] Parsing tasks from: ${tasksPath}`);
+      const tasks = await taskEvaluator.parseTasks(tasksPath);
+      const allEvaluations = await taskEvaluator.evaluateAllTasks(tasks, context);
+
+      // 7. Filter for Codex-suitable tasks (excluding completed tasks)
+      const codexEvaluations = allEvaluations.filter((e: any) =>
+        e.recommendCodex && !e.task.completed
+      );
+
+      if (codexEvaluations.length === 0) {
+        vscode.window.showInformationMessage('没有需要 Codex 处理的任务');
+        return null;
+      }
+
+      // 7. Confirm with user
+      const confirmed = await vscode.window.showInformationMessage(
+        `发现 ${codexEvaluations.length} 个任务可以使用 Codex 自动实现，是否继续？`,
+        '继续',
+        '取消'
+      );
+
+      if (confirmed !== '继续') {
+        this.outputChannel.appendLine('[SamManager] User cancelled auto-implementation');
+        return null;
+      }
+
+      // 8. Execute batch delegation (context already loaded in step 5)
+      this.outputChannel.appendLine(
+        `[SamManager] Starting batch delegation for ${codexEvaluations.length} tasks...`
+      );
+
+      const results = await batchDelegator.delegateTasks(
+        codexEvaluations,
+        specName,
+        context,
+        {
+          maxConcurrency: 3,
+          retryCount: 1,
+          timeout: 360000, // 6 minutes initial
+          showProgress: true
+        }
+      );
+
+      // 9. Show summary
+      const successCount = results.filter((r: any) => r.success).length;
+      const failedCount = results.filter((r: any) => !r.success).length;
+
+      const summaryMsg = `
+✅ 批量实现完成！
+
+成功: ${successCount}/${codexEvaluations.length}
+失败: ${failedCount}/${codexEvaluations.length}
+成功率: ${Math.round((successCount / codexEvaluations.length) * 100)}%
+
+详情见输出面板
+      `;
+
+      vscode.window.showInformationMessage(summaryMsg.trim());
+
+      // 10. Log detailed results
+      this.outputChannel.appendLine('\n=== 批量实现结果 ===');
+      results.forEach((r: any) => {
+        const status = r.success ? '✅ 成功' : '❌ 失败';
+        this.outputChannel.appendLine(
+          `\n${status} 任务 ${r.evaluation.task.number}: ${r.evaluation.task.title}\n` +
+          `  耗时: ${Math.round(r.duration / 1000)}s\n` +
+          `  ${r.error ? `错误: ${r.error}` : '已完成'}`
+        );
+      });
+
+      return results;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.outputChannel.appendLine(`[SamManager] Error in autoImplementTasks: ${errorMsg}`);
+      vscode.window.showErrorMessage(`Failed to auto-implement tasks: ${errorMsg}`);
+      return null;
+    }
+  }
 }

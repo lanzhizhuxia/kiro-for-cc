@@ -819,6 +819,28 @@ function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecEx
                 outputChannel.appendLine(`Error in sam.implementWithCodex: ${error}`);
                 vscode.window.showErrorMessage(`Failed to implement task: ${error}`);
             }
+        }),
+
+        vscode.commands.registerCommand('kfc.sam.autoEvaluateTasks', async () => {
+            outputChannel.appendLine('\n=== COMMAND kfc.sam.autoEvaluateTasks TRIGGERED ===');
+
+            try {
+                await samManager.autoEvaluateTasks();
+            } catch (error) {
+                outputChannel.appendLine(`Error in sam.autoEvaluateTasks: ${error}`);
+                vscode.window.showErrorMessage(`Failed to evaluate tasks: ${error}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('kfc.sam.autoImplementTasks', async () => {
+            outputChannel.appendLine('\n=== COMMAND kfc.sam.autoImplementTasks TRIGGERED ===');
+
+            try {
+                await samManager.autoImplementTasks();
+            } catch (error) {
+                outputChannel.appendLine(`Error in sam.autoImplementTasks: ${error}`);
+                vscode.window.showErrorMessage(`Failed to auto-implement tasks: ${error}`);
+            }
         })
     );
 

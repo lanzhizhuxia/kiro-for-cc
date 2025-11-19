@@ -2,7 +2,7 @@
   "name": "kiro-for-cc",
   "displayName": "Kiro for Claude Code",
   "description": "Spec-driven development with Claude Code - inspired by Kiro",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "heisebaiyun",
   "icon": "icon.png",
   "repository": {
@@ -239,6 +239,18 @@
         "icon": "$(code)"
       },
       {
+        "command": "kfc.sam.autoEvaluateTasks",
+        "title": "Sam: Auto-Evaluate Tasks",
+        "category": "Kiro for CC",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "kfc.sam.autoImplementTasks",
+        "title": "Sam: Auto-Implement Tasks with Codex",
+        "category": "Kiro for CC",
+        "icon": "$(rocket)"
+      },
+      {
         "command": "kfc.codex.reviewDesign",
         "title": "Codex: Deep Analysis of Design Document",
         "category": "Kiro for CC",
@@ -330,7 +342,7 @@
       "view/item/context": [
         {
           "command": "kfc.spec.delete",
-          "when": "view == kfc.views.specExplorer && viewItem == spec",
+          "when": "view == kfc.views.specExplorer && (viewItem == spec || viewItem == spec-with-progress)",
           "group": "7_modification"
         },
         {
@@ -485,6 +497,8 @@
     "install:both": "./scripts/build-and-install.sh both",
     "quick-update": "./scripts/quick-update.sh",
     "setup:codex": "./scripts/setup-codex-mcp.sh",
+    "setup-sam-config": "bash ./scripts/setup-sam-config.sh",
+    "update-sam-config": "bash ./scripts/update-sam-config.sh",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {

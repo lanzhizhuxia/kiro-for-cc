@@ -2,6 +2,99 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2025-01-19
+
+### 🚀 Major Feature: Sam + Codex 自动化协作系统
+
+**Sam 现在可以自动评估和批量执行任务了！**
+
+#### 核心功能
+
+1. **TaskEvaluator - 任务评估器**
+   - 自动解析 `tasks.md` 文件
+   - 智能评估任务复杂度（0-100分，基于5个因素）
+   - 识别8种任务类型（算法、组件、API、数据处理等）
+   - 推荐执行方式（Codex vs 手动）
+   - 置信度评分（60%-95%）
+
+2. **BatchTaskDelegator - 批量任务委派器**
+   - 并发执行（可配置最大并发数，默认3）
+   - 自动失败重试（可配置次数）
+   - 实时进度显示
+   - 超时控制（默认5分钟）
+
+3. **CodeAcceptanceTester - 代码验收测试器**
+   - 基本代码质量检查
+   - 编译检查（简化版）
+   - 代码风格检查（简化版）
+   - 支持自定义验证逻辑
+
+4. **CodeIntegrator - 代码整合器**
+   - 智能文件路径推断
+   - Diff 视图展示（并排对比）
+   - 交互式合并选项（接受/合并/拒绝）
+   - 自动备份机制（.backup-{timestamp}）
+
+5. **SamCodexCoordinator - 主协调器**
+   - 统一管理整个自动化流程
+   - 自动更新 `tasks.md` 状态（标记为 [x]）
+   - 集成 PROGRESS.md 追踪
+   - 生成详细执行报告
+
+#### 新增命令
+
+- `Sam: Auto-Evaluate Tasks` - 评估任务并推荐执行方式
+- `Sam: Auto-Implement Tasks with Codex` - 自动化实现任务
+
+#### 智能评估规则
+
+**推荐使用 Codex**:
+- ✅ 算法实现（95%置信度）
+- ✅ 工具函数（95%置信度）
+- ✅ 数据处理（95%置信度）
+- ✅ 简单任务（复杂度 < 30分，80%置信度）
+- ✅ 适中任务（复杂度 30-70分，75%置信度）
+
+**推荐手动实现**:
+- ❌ 文档编写（90%置信度）
+- ❌ 重构任务（90%置信度）
+- ❌ UI/UX 主观任务（85%置信度）
+- ❌ 复杂任务（复杂度 > 70分，70%置信度）
+
+#### 自动化流程
+
+```
+1. 解析 tasks.md
+2. 评估每个任务（复杂度、类型、推荐）
+3. 批量委派给 Codex（3个并发）
+4. 自动验收代码质量
+5. 显示 diff 供用户审查
+6. 更新任务状态（tasks.md）
+7. 记录执行报告（PROGRESS.md）
+```
+
+#### 文档
+
+- [用户指南](docs/SAM_AUTO_IMPLEMENTATION_GUIDE.md)
+- [架构设计](docs/SAM_CODEX_AUTOMATION_DESIGN.md)
+
+#### 技术细节
+
+**新增文件**:
+- `src/features/sam/automation/taskEvaluator.ts` (289行)
+- `src/features/sam/automation/batchTaskDelegator.ts` (262行)
+- `src/features/sam/automation/codeAcceptanceTester.ts` (216行)
+- `src/features/sam/automation/codeIntegrator.ts` (246行)
+- `src/features/sam/automation/samCodexCoordinator.ts` (395行)
+- `src/features/sam/automation/types.ts` (210行)
+- `src/features/sam/automation/index.ts` (11行)
+
+**总计**: ~1629行新代码
+
+**集成点**:
+- `extension.ts`: 初始化 SamCodexCoordinator
+- `package.json`: 注册新命令
+
 ## [0.5.0] - 2025-11-19
 
 ### 🧹 Major Cleanup: Removed Unused Codex Code
