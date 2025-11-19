@@ -20,6 +20,9 @@ coverage/
 
 # Claude临时文件
 .claude/specs/
+.claude/codex/sessions.json
+.claude/codex/execution-history/
+.claude/settings.local.json
 
 # 敏感配置
 config.json
