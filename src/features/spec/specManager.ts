@@ -313,10 +313,26 @@ This document has not been created yet.`;
         }
 
         try {
-            const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(specsPath));
-            return entries
-                .filter(([, type]) => type === vscode.FileType.Directory)
-                .map(([name]) => name);
+            const allSpecs: string[] = [];
+
+            // Only scan in-progress and pending directories (exclude completed)
+            const activeDirs = ['in-progress', 'pending'];
+
+            for (const dir of activeDirs) {
+                const dirPath = path.join(specsPath, dir);
+                try {
+                    const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+                    const specNames = entries
+                        .filter(([, type]) => type === vscode.FileType.Directory)
+                        .map(([name]) => `${dir}/${name}`);
+                    allSpecs.push(...specNames);
+                } catch (error) {
+                    // Directory doesn't exist, skip
+                    this.outputChannel.appendLine(`[SpecManager] Directory not found: ${dirPath}`);
+                }
+            }
+
+            return allSpecs;
         } catch (error) {
             // Directory doesn't exist yet
             return [];

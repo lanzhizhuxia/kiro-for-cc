@@ -67,7 +67,7 @@ a design.
 
 **Constraints:**
 
-- The model MUST create a '{{specBasePath}}/{feature_name}/requirements.md' file if it doesn't already exist
+- The model MUST create a '{{specBasePath}}/in-progress/{feature_name}/requirements.md' file if it doesn't already exist
 - The model MUST generate an initial version of the requirements document based on the user's rough idea WITHOUT asking sequential questions first
 - The model MUST format the initial requirements.md document with:
 - A clear introduction section that summarizes the feature
@@ -127,7 +127,7 @@ The design document should be based on the requirements document, so ensure it e
 
 **Constraints:**
 
-- The model MUST create a '{{specBasePath}}/{feature_name}/design.md' file if it doesn't already exist
+- The model MUST create a '{{specBasePath}}/in-progress/{feature_name}/design.md' file if it doesn't already exist
 - The model MUST identify areas where research is needed based on the feature requirements
 - The model MUST conduct research and build up context in the conversation thread
 - The model SHOULD use parallel tool calls when conducting research:
@@ -137,7 +137,7 @@ The design document should be based on the requirements document, so ensure it e
 - The model SHOULD NOT create separate research files, but instead use the research as context for the design and implementation plan
 - The model MUST summarize key findings that will inform the feature design
 - The model SHOULD cite sources and include relevant links in the conversation
-- The model MUST create a detailed design document at '{{specBasePath}}/{feature_name}/design.md'
+- The model MUST create a detailed design document at '{{specBasePath}}/in-progress/{feature_name}/design.md'
 - The model MUST incorporate research findings directly into the design process
 - The model MUST include the following sections in the design document:
 
@@ -171,10 +171,10 @@ The tasks document should be based on the design document, so ensure it exists f
 
 **Constraints:**
 
-- The model MUST create a '{{specBasePath}}/{feature_name}/tasks.md' file if it doesn't already exist
+- The model MUST create a '{{specBasePath}}/in-progress/{feature_name}/tasks.md' file if it doesn't already exist
 - The model MUST return to the design step if the user indicates any changes are needed to the design
 - The model MUST return to the requirement step if the user indicates that we need additional requirements
-- The model MUST create an implementation plan at '{{specBasePath}}/{feature_name}/tasks.md'
+- The model MUST create an implementation plan at '{{specBasePath}}/in-progress/{feature_name}/tasks.md'
 - The model MUST use the following specific instructions when creating the implementation plan:
 
 ```plain
@@ -360,8 +360,10 @@ Spec base path: {{specBasePath}}
 Please:
 
 1. Choose an appropriate kebab-case name for this spec based on the description
-2. Create the directory structure: {{specBasePath}}/{your-chosen-name}/
+2. Create the directory structure: {{specBasePath}}/in-progress/{your-chosen-name}/
 3. Create the requirements.md file in that directory
 4. Write the requirements document following the spec workflow in EARS format
 
 You have full control over the naming and file creation.
+
+Note: New specs are created in the 'in-progress' subdirectory. When completed, they can be moved to 'completed' for archiving.

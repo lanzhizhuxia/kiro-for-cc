@@ -7,7 +7,7 @@ export const CONFIG_FILE_NAME = 'kfc-settings.json';
 // Default configuration
 export const DEFAULT_CONFIG = {
     paths: {
-        specs: '.claude/specs',
+        specs: 'docs/specs',         // Project documentation (Git tracked)
         steering: '.claude/steering',
         settings: '.claude/settings'
     },
@@ -18,6 +18,13 @@ export const DEFAULT_CONFIG = {
         hooks: true,
         settings: false
     }
+} as const;
+
+// Sam working directory paths (temporary files, not tracked in Git)
+export const SAM_PATHS = {
+    workDir: '.claude/specs',           // Sam's temporary working directory
+    systemPrompts: '.claude/system-prompts',
+    codex: '.claude/codex'
 } as const;
 
 // Legacy exports for backward compatibility (can be removed after updating all references)

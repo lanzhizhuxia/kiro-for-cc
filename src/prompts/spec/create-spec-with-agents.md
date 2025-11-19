@@ -28,4 +28,6 @@ Workspace path: {{workspacePath}}
 Spec base path: {{specBasePath}}
 
 You have full control over the naming and file creation.
+
+Note: Create new specs in the '{{specBasePath}}/in-progress/{spec-name}/' directory. When completed, they can be moved to '{{specBasePath}}/completed/' for archiving.
 </user_input>
