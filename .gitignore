@@ -18,3 +18,11 @@ coverage/
 *.snap.tmp
 .nyc_output/
 
+# Claude临时文件
+.claude/specs/
+
+# 敏感配置
+config.json
+*.env
+.env.*
+secrets/

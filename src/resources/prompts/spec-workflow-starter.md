@@ -42,6 +42,29 @@ When the user describes a new feature: (user_input: feature description)
    - [ ] Task Planning
 3. Read language_preference from ~/.claude/CLAUDE.md (to pass to corresponding sub-agents in the process)
 4. Create directory structure: {spec_base_path:.claude/specs}/{feature_name}/
+5. **Create PROGRESS.md** file in {spec_base_path}/{feature_name}/PROGRESS.md:
+   ```
+   # Progress Tracking - {Feature Name}
+
+   ## Current Phase
+   - **Phase**: Requirements
+   - **Status**: In Progress
+
+   ## Completed Phases
+   - [ ] Requirements
+   - [ ] Design
+   - [ ] Tasks
+
+   ## Current Tasks
+   - Gathering requirements
+   - Writing initial requirements document
+
+   ## Blockers
+   None
+
+   ## Key Decisions
+   (To be added as decisions are made)
+   ```
 
 ### 1. Requirement Gathering
 

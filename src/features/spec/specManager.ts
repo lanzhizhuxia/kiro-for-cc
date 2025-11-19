@@ -4,12 +4,15 @@ import { ClaudeCodeProvider } from '../../providers/claudeCodeProvider';
 import { ConfigManager } from '../../utils/configManager';
 import { NotificationUtils } from '../../utils/notificationUtils';
 import { PromptLoader } from '../../services/promptLoader';
+import { CodexOrchestrator } from '../codex/codexOrchestrator';
+import { TaskDescriptor, ExecutionOptions, ExecutionResult } from '../codex/types';
 
 export type SpecDocumentType = 'requirements' | 'design' | 'tasks';
 
 export class SpecManager {
     private configManager: ConfigManager;
     private promptLoader: PromptLoader;
+    private codexOrchestrator?: CodexOrchestrator;
 
     constructor(
         private claudeProvider: ClaudeCodeProvider,
@@ -18,6 +21,21 @@ export class SpecManager {
         this.configManager = ConfigManager.getInstance();
         this.configManager.loadSettings();
         this.promptLoader = PromptLoader.getInstance();
+    }
+
+    /**
+     * Initialize Codex integration (called from extension.ts)
+     */
+    setCodexOrchestrator(orchestrator: CodexOrchestrator): void {
+        this.codexOrchestrator = orchestrator;
+        this.outputChannel.appendLine('[SpecManager] Codex orchestrator set');
+    }
+
+    /**
+     * Check if Codex is available
+     */
+    isCodexAvailable(): boolean {
+        return !!this.codexOrchestrator;
     }
 
     public async getSpecBasePath(): Promise<string> {
@@ -303,5 +321,337 @@ This document has not been created yet.`;
             // Directory doesn't exist yet
             return [];
         }
+    }
+
+    /**
+     * Review design document with Codex deep analysis
+     *
+     * @param specName - Spec name
+     * @param designPath - Path to design document
+     */
+    async reviewDesignWithCodex(
+        specName: string,
+        designPath: string
+    ): Promise<void> {
+        if (!this.codexOrchestrator) {
+            throw new Error('Codex is not available');
+        }
+
+        this.outputChannel.appendLine(`[SpecManager] Starting Codex analysis for design: ${specName}`);
+
+        try {
+            // 1. Read design document content
+            const designContent = await vscode.workspace.fs.readFile(
+                vscode.Uri.file(designPath)
+            );
+            const content = Buffer.from(designContent).toString('utf-8');
+
+            // 2. Build task descriptor
+            const task: TaskDescriptor = {
+                id: `design-review-${specName}-${Date.now()}`,
+                type: 'review',
+                description: `请用中文对设计文档进行深度分析。分析要点：
+1. 设计方案的完整性和可行性
+2. 技术选型是否合理
+3. 潜在的风险和问题
+4. 性能和稳定性考虑
+5. 改进建议
+
+请以中文输出完整的分析报告。
+
+Design document to analyze: ${specName}`,
+                specName,
+                context: {
+                    design: content,
+                    additionalContext: {
+                        documentType: 'design',
+                        filePath: designPath,
+                        outputLanguage: 'zh-CN'
+                    }
+                }
+            };
+
+            // 3. Enable deep analysis options
+            const options: ExecutionOptions = {
+                enableDeepThinking: true,
+                enableCodebaseScan: true,
+                forceMode: 'codex'  // Force Codex mode
+            };
+
+            // 4. Execute Codex analysis
+            this.outputChannel.appendLine(`[SpecManager] Executing Codex task: ${task.id}`);
+            const result = await this.codexOrchestrator.executeTask(task, options);
+
+            // 5. Handle analysis result
+            if (result.success) {
+                // 5a. Save analysis result to file
+                const analysisPath = designPath.replace('.md', '-codex-analysis.md');
+                await this._saveAnalysisResult(analysisPath, result);
+
+                // 5b. Show analysis result in WebView (if deep thinking result is available)
+                if (result.thinkingSummary) {
+                    this.outputChannel.appendLine(`[SpecManager] Showing analysis result in WebView`);
+
+                    // Prepare metadata
+                    const metadata = {
+                        sessionId: result.sessionId,
+                        mode: result.mode,
+                        executionTime: result.duration,
+                        timestamp: result.endTime.toISOString()
+                    };
+
+                    // Show WebView
+                    await this.codexOrchestrator.showAnalysisResult(
+                        result.thinkingSummary,
+                        metadata
+                    );
+                }
+
+                // 5c. Show result notification
+                const choice = await vscode.window.showInformationMessage(
+                    `Codex analysis completed! Saved to: ${path.basename(analysisPath)}`,
+                    'View Result',
+                    'Close'
+                );
+
+                if (choice === 'View Result') {
+                    const doc = await vscode.workspace.openTextDocument(analysisPath);
+                    await vscode.window.showTextDocument(doc);
+                }
+            } else {
+                vscode.window.showErrorMessage(`Codex analysis failed: ${result.error?.message}`);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.outputChannel.appendLine(`[SpecManager] Codex analysis error: ${errorMessage}`);
+            vscode.window.showErrorMessage(`Failed to analyze design with Codex: ${errorMessage}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Review requirements document with Codex deep analysis
+     *
+     * @param specName - Spec name
+     * @param reqPath - Path to requirements document
+     */
+    async reviewRequirementsWithCodex(
+        specName: string,
+        reqPath: string
+    ): Promise<void> {
+        if (!this.codexOrchestrator) {
+            throw new Error('Codex is not available');
+        }
+
+        this.outputChannel.appendLine(`[SpecManager] Starting Codex analysis for requirements: ${specName}`);
+
+        try {
+            // 1. Read requirements document content
+            const reqContent = await vscode.workspace.fs.readFile(
+                vscode.Uri.file(reqPath)
+            );
+            const content = Buffer.from(reqContent).toString('utf-8');
+
+            // 2. Build task descriptor
+            const task: TaskDescriptor = {
+                id: `requirements-review-${specName}-${Date.now()}`,
+                type: 'review',
+                description: `请用中文对需求文档进行深度分析。分析要点：
+1. 需求的清晰度和完整性
+2. 需求的可行性和合理性
+3. 需求之间的一致性和冲突
+4. 潜在的遗漏或模糊点
+5. 改进建议
+
+请以中文输出完整的分析报告。
+
+Requirements document to analyze: ${specName}`,
+                specName,
+                context: {
+                    requirements: content,
+                    additionalContext: {
+                        documentType: 'requirements',
+                        filePath: reqPath,
+                        outputLanguage: 'zh-CN'
+                    }
+                }
+            };
+
+            // 3. Enable deep thinking (but not codebase scan for requirements)
+            const options: ExecutionOptions = {
+                enableDeepThinking: true,
+                enableCodebaseScan: false,  // Requirements analysis doesn't need codebase scan
+                forceMode: 'codex'
+            };
+
+            // 4. Execute Codex analysis
+            this.outputChannel.appendLine(`[SpecManager] Executing Codex task: ${task.id}`);
+            const result = await this.codexOrchestrator.executeTask(task, options);
+
+            // 5. Handle analysis result
+            if (result.success) {
+                // 5a. Save analysis result to file
+                const analysisPath = reqPath.replace('.md', '-codex-analysis.md');
+                await this._saveAnalysisResult(analysisPath, result);
+
+                // 5b. Show result notification
+                const choice = await vscode.window.showInformationMessage(
+                    `Codex analysis completed! Saved to: ${path.basename(analysisPath)}`,
+                    'View Result',
+                    'Close'
+                );
+
+                if (choice === 'View Result') {
+                    const doc = await vscode.workspace.openTextDocument(analysisPath);
+                    await vscode.window.showTextDocument(doc);
+                }
+            } else {
+                vscode.window.showErrorMessage(`Codex analysis failed: ${result.error?.message}`);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.outputChannel.appendLine(`[SpecManager] Codex analysis error: ${errorMessage}`);
+            vscode.window.showErrorMessage(`Failed to analyze requirements with Codex: ${errorMessage}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Save analysis result to file
+     *
+     * @param outputPath - Output file path
+     * @param result - Execution result
+     */
+    private async _saveAnalysisResult(
+        outputPath: string,
+        result: ExecutionResult
+    ): Promise<void> {
+        const markdown = this._formatAnalysisAsMarkdown(result);
+
+        // Add Codex generation marker
+        const markedContent = `<!-- Generated by Codex Deep Analysis -->
+<!-- Session ID: ${result.sessionId} -->
+<!-- Generated at: ${result.endTime.toISOString()} -->
+
+${markdown}`;
+
+        await vscode.workspace.fs.writeFile(
+            vscode.Uri.file(outputPath),
+            Buffer.from(markedContent, 'utf-8')
+        );
+
+        this.outputChannel.appendLine(`[SpecManager] Analysis result saved to: ${outputPath}`);
+    }
+
+    /**
+     * Format analysis result as Markdown
+     *
+     * @param result - Execution result
+     * @returns Formatted markdown string
+     */
+    private _formatAnalysisAsMarkdown(result: ExecutionResult): string {
+        let md = `# Codex Deep Analysis Result\n\n`;
+
+        // Add thinking result if available
+        if (result.thinkingSummary) {
+            md += `## Problem Decomposition\n\n${this._formatProblemDecomposition(result.thinkingSummary.problemDecomposition)}\n\n`;
+            md += `## Risk Identification\n\n${this._formatRisks(result.thinkingSummary.riskIdentification)}\n\n`;
+
+            if (result.thinkingSummary.solutionComparison && result.thinkingSummary.solutionComparison.length > 0) {
+                md += `## Solution Comparison\n\n${this._formatSolutions(result.thinkingSummary.solutionComparison)}\n\n`;
+            }
+
+            md += `## Recommended Decision\n\n${this._formatDecision(result.thinkingSummary.recommendedDecision)}\n\n`;
+        }
+
+        // Add output if available
+        if (result.output) {
+            md += `## Analysis Output\n\n${result.output}\n\n`;
+        }
+
+        // Add execution information
+        md += `## Execution Information\n\n`;
+        md += `- Session ID: ${result.sessionId}\n`;
+        md += `- Execution Mode: ${result.mode}\n`;
+        md += `- Duration: ${result.duration}ms\n`;
+        md += `- Start Time: ${result.startTime.toLocaleString()}\n`;
+        md += `- End Time: ${result.endTime.toLocaleString()}\n`;
+
+        if (result.generatedFiles && result.generatedFiles.length > 0) {
+            md += `- Generated Files: ${result.generatedFiles.join(', ')}\n`;
+        }
+
+        return md;
+    }
+
+    /**
+     * Format problem decomposition (tree structure)
+     */
+    private _formatProblemDecomposition(nodes: any[]): string {
+        let md = `**Problem Breakdown:**\n\n`;
+
+        const formatNode = (node: any, level: number = 0): void => {
+            const indent = '  '.repeat(level);
+            md += `${indent}- ${node.description} (Complexity: ${node.complexity}/10)\n`;
+
+            if (node.subProblems && node.subProblems.length > 0) {
+                node.subProblems.forEach((sub: any) => formatNode(sub, level + 1));
+            }
+        };
+
+        nodes.forEach(node => formatNode(node, 0));
+        return md;
+    }
+
+    /**
+     * Format risks
+     */
+    private _formatRisks(risks: any[]): string {
+        let md = `**Identified Risks:**\n\n`;
+
+        if (risks.length === 0) {
+            md += `No significant risks identified.\n`;
+        } else {
+            risks.forEach((risk, index) => {
+                md += `${index + 1}. **[${risk.severity.toUpperCase()}] ${risk.description}**\n`;
+                md += `   - Category: ${risk.category}\n`;
+                md += `   - Mitigation: ${risk.mitigation}\n`;
+                md += `\n`;
+            });
+        }
+
+        return md;
+    }
+
+    /**
+     * Format solution comparison
+     */
+    private _formatSolutions(solutions: any[]): string {
+        let md = `**Alternative Solutions:**\n\n`;
+
+        solutions.forEach((solution, index) => {
+            md += `### Option ${index + 1}: ${solution.approach} (Score: ${solution.score}/10)\n\n`;
+            md += `**Pros:**\n`;
+            solution.pros.forEach((pro: string) => md += `- ${pro}\n`);
+            md += `\n**Cons:**\n`;
+            solution.cons.forEach((con: string) => md += `- ${con}\n`);
+            md += `\n**Complexity:** ${solution.complexity}/10\n\n`;
+        });
+
+        return md;
+    }
+
+    /**
+     * Format decision
+     */
+    private _formatDecision(decision: any): string {
+        let md = `**Selected Solution:** ${decision.selectedSolution}\n\n`;
+        md += `**Rationale:** ${decision.rationale}\n\n`;
+        md += `**Estimated Effort:** ${decision.estimatedEffort}\n\n`;
+        md += `**Next Steps:**\n\n`;
+        decision.nextSteps.forEach((step: string, index: number) => {
+            md += `${index + 1}. ${step}\n`;
+        });
+        return md;
     }
 }

@@ -2,6 +2,212 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2025-11-19
+
+### ✨ Major Feature: Sam + Codex Integration
+
+**Sam can now delegate implementation tasks to Codex!**
+
+This release implements the PM-Engineer collaboration model:
+- **Sam acts as PM/Architect** - Creates specs, evaluates tasks, assigns work to Codex
+- **Codex acts as Engineer** - Implements specific coding tasks delegated by Sam
+
+#### New Features
+
+1. **`implementTaskWithCodex()` Method**
+   - Sam can delegate specific development tasks to Codex
+   - Automatically loads requirements and design context
+   - Codex generates complete code implementation with Chinese comments
+   - Results saved to spec directory for review
+
+2. **New Command: "Implement Task with Codex"**
+   - Available in Command Palette (Cmd+Shift+P)
+   - User provides spec name and task description
+   - Sam loads context and delegates to Codex
+   - Implementation displayed automatically when complete
+
+3. **Chinese Code Generation**
+   - Codex outputs code with Chinese comments
+   - Follows project coding standards
+   - Includes error handling and implementation notes
+
+#### How It Works
+
+```
+User → "Implement Task with Codex"
+  ↓
+Sam loads spec context (requirements + design)
+  ↓
+Sam builds task for Codex with Chinese instructions
+  ↓
+Codex analyzes codebase and implements task
+  ↓
+Sam saves result to .claude/specs/{spec-name}/task-implementation-*.md
+  ↓
+User reviews implementation
+```
+
+#### Example Usage
+
+1. Open Command Palette (Cmd+Shift+P)
+2. Run "Implement Task with Codex"
+3. Enter spec name: `bubble-sort`
+4. Enter task: `实现冒泡排序算法，支持升序和降序`
+5. Wait for Codex to generate implementation
+6. Review the generated code with Chinese comments
+
+#### Technical Details
+
+- **Integration Point**: SamManager now has CodexOrchestrator dependency
+- **Context Loading**: Automatically loads requirements.md and design.md
+- **Codebase Scanning**: Enabled for better code generation quality
+- **Output Format**: Markdown file with code blocks and implementation notes
+
+## [0.3.9] - 2025-11-19
+
+### ✨ New Features
+
+- **Chinese Language Support for Codex Analysis**:
+  - Review Design and Review Requirements now output in Chinese by default
+  - Added structured analysis prompts in Chinese for both design and requirements review
+  - Codex will now provide comprehensive analysis reports in Chinese
+  - Analysis includes: completeness, feasibility, technical decisions, risks, and improvement suggestions
+
+## [0.3.8] - 2025-11-19
+
+### 🐛 Critical Fix
+
+- **MCPClient Tool Names**: Fixed tool names when directly connecting to codex-mcp-server
+  - Changed from `'mcp__codex-cli__codex'` (with prefix) to `'codex'` (raw tool name)
+  - When using direct stdio connection, MCP SDK doesn't add prefixes automatically
+  - Resolves the actual "Unknown tool" error when calling Codex
+
+## [0.3.7] - 2025-11-19
+
+### 🐛 Bug Fixes
+
+- **Codex MCP Integration**: Fixed MCPClient initialization to use configured codex-mcp-server path
+  - Changed from starting new `codex mcp-server` process to using user's configured `codex-cli` MCP server
+  - Updated tool names from `mcp__codex__*` to `mcp__codex-cli__*` to match actual server
+  - Fixed in both `codexOrchestrator.ts` and `codexExecutor.ts`
+  - Resolves "Unknown tool" errors when using Review Design feature
+
+## [0.3.6] - 2025-11-19
+
+### 🐛 Bug Fixes
+
+- **Codex MCP Tool Names**: Updated tool names in MCPClient to match codex-cli server
+  - Fixed tool name from `mcp__codex__codex` to `mcp__codex-cli__codex`
+  - Fixed reply tool name to `mcp__codex-cli__codex-reply`
+
+## [0.3.0] - 2025-11-18
+
+### ✨ New Features - Codex Workflow Orchestration System
+
+This release introduces the **Codex Workflow Orchestration System**, a major new feature that brings intelligent task routing, deep analysis, and automated execution to spec-driven development.
+
+#### Core Components
+
+- **Intelligent Task Router**
+  - Automatic complexity analysis with multi-dimensional scoring (code scale, technical difficulty, business impact)
+  - Smart routing between quick mode and Codex mode based on task complexity
+  - Human-readable recommendation reasons with confidence scores
+  - Support for both static analysis and Claude-based dynamic analysis
+
+- **Deep Thinking Engine**
+  - Sequential thinking integration via MCP for complex problem decomposition
+  - Timeout detection and graceful cancellation mechanism
+  - Real-time progress tracking (initializing → analyzing → parsing → completed)
+  - Automatic intermediate result saving on timeout/cancellation
+
+- **Codebase Scanner**
+  - Comprehensive codebase analysis with file type classification
+  - Dependency detection and complexity metrics
+  - Language statistics and project structure mapping
+  - Smart scanning with configurable depth and exclusion rules
+
+- **MCP Lifecycle Manager**
+  - Automatic MCP server startup and health monitoring
+  - TCP-based health checks with auto-restart on failure
+  - Graceful shutdown handling with cleanup
+  - Real-time server status tracking
+
+- **Security Guard**
+  - Dangerous command detection (rm -rf, sudo, chmod, etc.)
+  - Sensitive file access control (.env, credentials, SSH keys, etc.)
+  - Configuration file modification protection with automatic backup
+  - Sensitive content sanitization in logs
+
+- **Session Management**
+  - Conversation persistence across sessions
+  - Task context tracking with unique markers
+  - State restoration with file locks and atomic writes
+  - Comprehensive session history
+
+- **Execution Logging**
+  - Dual-output logging (real-time OutputChannel + persistent file)
+  - MCP request/response tracking with sanitization
+  - Structured log format with timestamps and severity levels
+  - Buffered writes with automatic flush
+
+- **Progress Indicator**
+  - VSCode native progress window integration
+  - 7-phase execution tracking with detailed messages
+  - User-cancellable operations with checkpoint verification
+  - Elapsed time reporting
+
+- **Task CodeLens Provider**
+  - Inline "Execute with Codex" button in tasks.md
+  - One-click task execution from document
+  - Integration with Codex orchestrator
+
+#### User Interface Enhancements
+
+- Add Codex analysis commands for design and requirements documents
+- Show sparkle icon for Codex-enabled documents in tree view
+- Add context menu items for deep document analysis
+- Integrate CodeLens in tasks.md for quick task execution
+
+#### Configuration
+
+- Add `kfc.codex.enableTaskCodeLens` setting (default: true)
+- Support for Codex configuration in settings panel
+
+#### Testing
+
+- **215+ comprehensive test cases** covering all components
+  - Unit tests for each component with Jest
+  - Integration tests for MCP lifecycle and orchestration
+  - E2E tests covering 10 scenarios (92% function coverage)
+  - Security tests with 84 test cases (all 6 security requirements)
+  - Mock testing strategy for VSCode API and MCP client
+
+#### Documentation
+
+- Complete user guide (6,500 words) covering installation, usage, FAQ, and troubleshooting
+- Comprehensive architecture documentation (15,000 words) with component details and flow diagrams
+- CONTRIBUTING.md for developer onboarding
+- Updated CLAUDE.md with Codex system overview
+
+### 🎯 What is Codex Mode?
+
+Codex mode is an intelligent execution mode that activates for complex tasks requiring:
+- Deep reasoning and problem decomposition
+- Large-scale codebase analysis
+- Multi-file impact assessment
+- Complex dependency resolution
+- Critical system changes
+
+The system automatically decides between:
+- **Quick Mode**: Direct execution for simple, well-defined tasks
+- **Codex Mode**: Enhanced execution with deep thinking, codebase scanning, and comprehensive analysis
+
+### 📊 Project Impact
+
+- **41/77 tasks completed** (53.2%) following structured batch development
+- **Fast release plan** executed focusing on P0 features for v1.0
+- **Systematic development** through 9 batches with parallel agent execution
+
 ## [0.2.9] - 2025-09-21
 
 ### 🐛 Bug Fixes

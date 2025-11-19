@@ -243,6 +243,42 @@ export class ClaudeCodeProvider {
     }
 
     /**
+     * Execute with system prompt from .claude/system-prompts/
+     * @param userPrompt The user's prompt
+     * @param systemPromptName The name of the system prompt file (without .md extension)
+     */
+    async executeWithSystemPrompt(
+        userPrompt: string,
+        systemPromptName: string
+    ): Promise<vscode.Terminal> {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+            throw new Error('No workspace folder found');
+        }
+
+        // Read system prompt file
+        const systemPromptPath = path.join(
+            workspaceRoot,
+            '.claude/system-prompts',
+            `${systemPromptName}.md`
+        );
+
+        if (!fs.existsSync(systemPromptPath)) {
+            this.outputChannel.appendLine(`[ClaudeCodeProvider] System prompt not found: ${systemPromptPath}`);
+            throw new Error(`System prompt not found: ${systemPromptName}.md`);
+        }
+
+        const systemPrompt = fs.readFileSync(systemPromptPath, 'utf-8');
+        this.outputChannel.appendLine(`[ClaudeCodeProvider] Loaded system prompt: ${systemPromptName} (${systemPrompt.length} chars)`);
+
+        // Combine system prompt and user prompt
+        const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
+
+        // Execute using split view
+        return await this.invokeClaudeSplitView(fullPrompt, `Sam - ${systemPromptName}`);
+    }
+
+    /**
      * 创建权限设置终端（供 PermissionManager 使用）
      */
     static createPermissionTerminal(): vscode.Terminal {

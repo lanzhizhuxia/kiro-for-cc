@@ -2,7 +2,7 @@
   "name": "kiro-for-cc",
   "displayName": "Kiro for Claude Code",
   "description": "Spec-driven development with Claude Code - inspired by Kiro",
-  "version": "0.2.9",
+  "version": "0.4.0",
   "publisher": "heisebaiyun",
   "icon": "icon.png",
   "repository": {
@@ -213,6 +213,60 @@
         "command": "kfc.spec.implTask",
         "title": "Implement Task",
         "category": "Kiro for CC"
+      },
+      {
+        "command": "kfc.sam.ask",
+        "title": "Ask Sam",
+        "category": "Kiro for CC",
+        "icon": "$(robot)"
+      },
+      {
+        "command": "kfc.sam.continue",
+        "title": "Continue Sam Work",
+        "category": "Kiro for CC",
+        "icon": "$(debug-continue)"
+      },
+      {
+        "command": "kfc.sam.viewProgress",
+        "title": "View Sam Progress",
+        "category": "Kiro for CC",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "kfc.sam.implementWithCodex",
+        "title": "Implement Task with Codex",
+        "category": "Kiro for CC",
+        "icon": "$(code)"
+      },
+      {
+        "command": "kfc.codex.reviewDesign",
+        "title": "Codex: Deep Analysis of Design Document",
+        "category": "Kiro for CC",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "kfc.codex.reviewRequirements",
+        "title": "Codex: Deep Analysis of Requirements Document",
+        "category": "Kiro for CC",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "kfc.codex.analyzeDocument",
+        "title": "Codex: Analyze Document",
+        "category": "Kiro for CC",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "kfc.codex.executeTask",
+        "title": "Execute Task with Codex",
+        "category": "Kiro for CC",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "kfc.codex.showTaskDetails",
+        "title": "Show Task Details",
+        "category": "Kiro for CC",
+        "icon": "$(info)"
       }
     ],
     "menus": {
@@ -236,6 +290,11 @@
           "command": "kfc.spec.refresh",
           "when": "view == kfc.views.specExplorer",
           "group": "navigation@3"
+        },
+        {
+          "command": "kfc.sam.ask",
+          "when": "view == kfc.views.specExplorer",
+          "group": "navigation@4"
         },
         {
           "command": "kfc.steering.generateInitial",
@@ -275,6 +334,26 @@
           "group": "7_modification"
         },
         {
+          "command": "kfc.sam.continue",
+          "when": "view == kfc.views.specExplorer && viewItem == spec-with-progress",
+          "group": "inline"
+        },
+        {
+          "command": "kfc.sam.viewProgress",
+          "when": "view == kfc.views.specExplorer && viewItem == spec-with-progress",
+          "group": "navigation"
+        },
+        {
+          "command": "kfc.codex.reviewDesign",
+          "when": "view == kfc.views.specExplorer && viewItem == spec-document-design-with-codex",
+          "group": "inline@1"
+        },
+        {
+          "command": "kfc.codex.reviewRequirements",
+          "when": "view == kfc.views.specExplorer && viewItem == spec-document-requirements-with-codex",
+          "group": "inline@1"
+        },
+        {
           "command": "kfc.steering.refine",
           "when": "view == kfc.views.steeringExplorer && viewItem == steering-document",
           "group": "inline"
@@ -283,6 +362,30 @@
           "command": "kfc.steering.delete",
           "when": "view == kfc.views.steeringExplorer && viewItem == steering-document",
           "group": "7_modification"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kfc.codex.reviewDesign",
+          "when": "resourceFilename == design.md",
+          "group": "kfc-codex@1"
+        },
+        {
+          "command": "kfc.codex.reviewRequirements",
+          "when": "resourceFilename == requirements.md",
+          "group": "kfc-codex@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "kfc.codex.reviewDesign",
+          "when": "resourceFilename == design.md",
+          "group": "navigation"
+        },
+        {
+          "command": "kfc.codex.reviewRequirements",
+          "when": "resourceFilename == requirements.md",
+          "group": "navigation"
         }
       ],
       "commandPalette": [
@@ -295,6 +398,17 @@
         },
         {
           "command": "kfc.checkForUpdates"
+        },
+        {
+          "command": "kfc.codex.reviewDesign",
+          "when": "false"
+        },
+        {
+          "command": "kfc.codex.reviewRequirements",
+          "when": "false"
+        },
+        {
+          "command": "kfc.codex.analyzeDocument"
         }
       ]
     },
@@ -345,6 +459,11 @@
           "type": "boolean",
           "default": false,
           "description": "Show Settings view"
+        },
+        "kfc.codex.enableTaskCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable CodeLens in tasks.md documents for Codex execution"
         }
       }
     }
@@ -360,9 +479,16 @@
     "package-web": "npm run build-prompts && webpack --mode production --devtool hidden-source-map",
     "test": "jest",
     "test:watch": "jest --watch",
+    "install:local": "./scripts/build-and-install.sh",
+    "install:vscode": "./scripts/build-and-install.sh vscode",
+    "install:cursor": "./scripts/build-and-install.sh cursor",
+    "install:both": "./scripts/build-and-install.sh both",
+    "quick-update": "./scripts/quick-update.sh",
+    "setup:codex": "./scripts/setup-codex-mcp.sh",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.22.0",
     "gray-matter": "^4.0.3",
     "handlebars": "^4.7.8",
     "js-yaml": "^4.1.0"

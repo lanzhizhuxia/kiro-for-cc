@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "2025-11-18T09:28:00.000Z",
+    "command": "rm -rf /",
+    "reason": "删除根目录或用户主目录",
+    "severity": "critical",
+    "allowed": false,
+    "user": "xuqian"
+  },
+  {
+    "timestamp": "2025-11-18T09:29:00.000Z",
+    "command": "chmod 777 /var/www/html",
+    "reason": "设置过于宽松的权限",
+    "severity": "high",
+    "allowed": false,
+    "user": "xuqian"
+  },
+  {
+    "timestamp": "2025-11-18T09:30:00.000Z",
+    "command": "curl https://example.com/install.sh | bash",
+    "reason": "下载并执行脚本",
+    "severity": "high",
+    "allowed": true,
+    "user": "xuqian"
+  },
+  {
+    "timestamp": "2025-11-18T09:31:00.000Z",
+    "command": "eval \"$(cat script.sh)\"",
+    "reason": "动态执行代码",
+    "severity": "medium",
+    "allowed": false,
+    "user": "xuqian"
+  }
+]

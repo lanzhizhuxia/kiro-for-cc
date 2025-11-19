@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { ClaudeCodeProvider } from './providers/claudeCodeProvider';
 import { SpecManager } from './features/spec/specManager';
 import { SteeringManager } from './features/steering/steeringManager';
@@ -16,12 +18,18 @@ import { UpdateChecker } from './utils/updateChecker';
 import { PermissionManager } from './features/permission/permissionManager';
 import { NotificationUtils } from './utils/notificationUtils';
 import { SpecTaskCodeLensProvider } from './providers/specTaskCodeLensProvider';
+import { SamManager } from './features/sam/samManager';
+import { CodexOrchestrator } from './features/codex/codexOrchestrator';
+import { TaskCodeLensProvider } from './features/codex/taskCodeLensProvider';
+import { handleExecuteTaskWithCodex, handleShowTaskDetails } from './features/codex/taskExecutionHandler';
 
 let claudeCodeProvider: ClaudeCodeProvider;
 let specManager: SpecManager;
 let steeringManager: SteeringManager;
 let permissionManager: PermissionManager;
 let agentManager: AgentManager;
+let samManager: SamManager;
+let codexOrchestrator: CodexOrchestrator | undefined;
 export let outputChannel: vscode.OutputChannel;
 
 // 导出 getter 函数供其他模块使用
@@ -62,10 +70,29 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize feature managers with output channel
     specManager = new SpecManager(claudeCodeProvider, outputChannel);
     steeringManager = new SteeringManager(claudeCodeProvider, outputChannel);
+    samManager = new SamManager(claudeCodeProvider, outputChannel);
 
     // Initialize Agent Manager and agents
     agentManager = new AgentManager(context, outputChannel);
     await agentManager.initializeBuiltInAgents();
+
+    // Initialize ConfigManager with credential manager (done before Codex initialization)
+    ConfigManager.getInstance().initializeCredentialManager(context);
+    outputChannel.appendLine('Credential Manager initialized successfully');
+
+    // Initialize Codex Orchestrator (for session management and lifecycle)
+    try {
+        codexOrchestrator = new CodexOrchestrator(context, outputChannel);
+        outputChannel.appendLine('Codex Orchestrator initialized successfully');
+
+        // Integrate Codex with SpecManager and SamManager
+        specManager.setCodexOrchestrator(codexOrchestrator);
+        samManager.setCodexOrchestrator(codexOrchestrator);
+        outputChannel.appendLine('Codex integrated with SpecManager and SamManager');
+    } catch (error) {
+        // Codex功能是可选的，初始化失败不应影响其他功能
+        outputChannel.appendLine(`Codex Orchestrator initialization skipped: ${error}`);
+    }
 
     // Register tree data providers
     const overviewProvider = new OverviewProvider(context);
@@ -78,6 +105,9 @@ export async function activate(context: vscode.ExtensionContext) {
     // Set managers
     specExplorer.setSpecManager(specManager);
     steeringExplorer.setSteeringManager(steeringManager);
+
+    // Connect ProgressTracker to SamManager
+    samManager.setProgressTracker(specExplorer.getProgressTracker());
 
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('kfc.views.overview', overviewProvider),
@@ -138,6 +168,52 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 
     outputChannel.appendLine('CodeLens provider for spec tasks registered');
+
+    // Register Task CodeLens provider for Codex mode (T55)
+    if (codexOrchestrator) {
+        const taskCodeLensProvider = new TaskCodeLensProvider(outputChannel);
+
+        const taskCodeLensDisposable = vscode.languages.registerCodeLensProvider(
+            selector, // 使用相同的selector（tasks.md文档）
+            taskCodeLensProvider
+        );
+
+        context.subscriptions.push(taskCodeLensDisposable);
+
+        // Register Codex task execution commands
+        context.subscriptions.push(
+            vscode.commands.registerCommand(
+                'kfc.codex.executeTask',
+                async (taskNumber: string, taskTitle: string, docUri: vscode.Uri) => {
+                    await handleExecuteTaskWithCodex(
+                        taskNumber,
+                        taskTitle,
+                        docUri,
+                        codexOrchestrator!,
+                        outputChannel
+                    );
+                }
+            )
+        );
+
+        context.subscriptions.push(
+            vscode.commands.registerCommand(
+                'kfc.codex.showTaskDetails',
+                async (taskNumber: string, taskTitle: string, docUri: vscode.Uri) => {
+                    await handleShowTaskDetails(
+                        taskNumber,
+                        taskTitle,
+                        docUri,
+                        outputChannel
+                    );
+                }
+            )
+        );
+
+        outputChannel.appendLine('Task CodeLens provider for Codex mode registered');
+    } else {
+        outputChannel.appendLine('Task CodeLens provider skipped (Codex not available)');
+    }
 }
 
 async function initializeDefaultSettings() {
@@ -173,6 +249,274 @@ async function initializeDefaultSettings() {
             Buffer.from(JSON.stringify(defaultSettings, null, 2))
         );
     }
+}
+
+/**
+ * Handle design document review command
+ */
+async function handleReviewDesignCommand(designUri?: vscode.Uri): Promise<void> {
+    // 1. Determine the design document to analyze
+    let filePath: string;
+
+    if (designUri) {
+        // Called from right-click menu or CodeLens
+        filePath = designUri.fsPath;
+    } else {
+        // Called from command palette, user needs to select file
+        const selectedUri = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: {
+                'Markdown files': ['md']
+            },
+            title: 'Select design document to analyze'
+        });
+
+        if (!selectedUri || selectedUri.length === 0) {
+            return; // User cancelled
+        }
+
+        filePath = selectedUri[0].fsPath;
+    }
+
+    // 2. Verify file exists
+    if (!fs.existsSync(filePath)) {
+        vscode.window.showErrorMessage(`File does not exist: ${filePath}`);
+        return;
+    }
+
+    // 3. Extract spec name (infer from path)
+    const specName = _extractSpecName(filePath);
+
+    // 4. Check if Codex is available
+    if (!specManager.isCodexAvailable()) {
+        const choice = await vscode.window.showWarningMessage(
+            'Codex deep analysis feature is not available. Please ensure Codex is properly configured.',
+            'View Configuration Guide',
+            'Cancel'
+        );
+
+        if (choice === 'View Configuration Guide') {
+            // Open configuration guide
+            vscode.env.openExternal(vscode.Uri.parse('https://github.com/notdp/kiro-for-cc#codex-configuration'));
+        }
+        return;
+    }
+
+    // 5. Show progress notification
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Analyzing design document: ${path.basename(filePath)}`,
+        cancellable: true
+    }, async (progress, token) => {
+        // 6. Call SpecManager's reviewDesignWithCodex method
+        try {
+            progress.report({ increment: 10, message: 'Reading document...' });
+
+            await specManager.reviewDesignWithCodex(specName, filePath);
+
+            progress.report({ increment: 90, message: 'Analysis complete' });
+
+            vscode.window.showInformationMessage(
+                `Design document analysis complete: ${path.basename(filePath)}`
+            );
+        } catch (error) {
+            // Handle cancellation
+            if (token.isCancellationRequested) {
+                vscode.window.showWarningMessage('Analysis cancelled');
+            } else {
+                // Check if it's an MCP-related error
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('mcp__codex') || errorMessage.includes('Unknown tool')) {
+                    const choice = await vscode.window.showErrorMessage(
+                        'Codex 是实验性功能，需要配置 MCP 服务器。基本 Spec 功能可正常使用。',
+                        '查看配置指南',
+                        '暂时禁用 Codex',
+                        '取消'
+                    );
+                    if (choice === '查看配置指南') {
+                        // Open local documentation
+                        const docPath = path.join(
+                            vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
+                            'docs',
+                            'CODEX_SETUP.md'
+                        );
+                        if (fs.existsSync(docPath)) {
+                            vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(docPath));
+                        } else {
+                            vscode.env.openExternal(vscode.Uri.parse('https://github.com/notdp/kiro-for-cc/blob/main/docs/CODEX_SETUP.md'));
+                        }
+                    } else if (choice === '暂时禁用 Codex') {
+                        vscode.window.showInformationMessage(
+                            '请在 src/features/spec/specManager.ts 的 isCodexAvailable() 方法中返回 false，然后重新编译安装。详见配置指南。'
+                        );
+                    }
+                } else {
+                    throw error;
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Handle requirements document review command
+ */
+async function handleReviewRequirementsCommand(reqUri?: vscode.Uri): Promise<void> {
+    // 1. Determine the requirements document to analyze
+    let filePath: string;
+
+    if (reqUri) {
+        // Called from right-click menu or CodeLens
+        filePath = reqUri.fsPath;
+    } else {
+        // Called from command palette, user needs to select file
+        const selectedUri = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: {
+                'Markdown files': ['md']
+            },
+            title: 'Select requirements document to analyze'
+        });
+
+        if (!selectedUri || selectedUri.length === 0) {
+            return; // User cancelled
+        }
+
+        filePath = selectedUri[0].fsPath;
+    }
+
+    // 2. Verify file exists
+    if (!fs.existsSync(filePath)) {
+        vscode.window.showErrorMessage(`File does not exist: ${filePath}`);
+        return;
+    }
+
+    // 3. Extract spec name (infer from path)
+    const specName = _extractSpecName(filePath);
+
+    // 4. Check if Codex is available
+    if (!specManager.isCodexAvailable()) {
+        const choice = await vscode.window.showWarningMessage(
+            'Codex deep analysis feature is not available. Please ensure Codex is properly configured.',
+            'View Configuration Guide',
+            'Cancel'
+        );
+
+        if (choice === 'View Configuration Guide') {
+            // Open configuration guide
+            vscode.env.openExternal(vscode.Uri.parse('https://github.com/notdp/kiro-for-cc#codex-configuration'));
+        }
+        return;
+    }
+
+    // 5. Show progress notification
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Analyzing requirements document: ${path.basename(filePath)}`,
+        cancellable: true
+    }, async (progress, token) => {
+        // 6. Call SpecManager's reviewRequirementsWithCodex method
+        try {
+            progress.report({ increment: 10, message: 'Reading document...' });
+
+            await specManager.reviewRequirementsWithCodex(specName, filePath);
+
+            progress.report({ increment: 90, message: 'Analysis complete' });
+
+            vscode.window.showInformationMessage(
+                `Requirements document analysis complete: ${path.basename(filePath)}`
+            );
+        } catch (error) {
+            // Handle cancellation
+            if (token.isCancellationRequested) {
+                vscode.window.showWarningMessage('Analysis cancelled');
+            } else {
+                // Check if it's an MCP-related error
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('mcp__codex') || errorMessage.includes('Unknown tool')) {
+                    const choice = await vscode.window.showErrorMessage(
+                        'Codex 是实验性功能，需要配置 MCP 服务器。基本 Spec 功能可正常使用。',
+                        '查看配置指南',
+                        '暂时禁用 Codex',
+                        '取消'
+                    );
+                    if (choice === '查看配置指南') {
+                        // Open local documentation
+                        const docPath = path.join(
+                            vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
+                            'docs',
+                            'CODEX_SETUP.md'
+                        );
+                        if (fs.existsSync(docPath)) {
+                            vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(docPath));
+                        } else {
+                            vscode.env.openExternal(vscode.Uri.parse('https://github.com/notdp/kiro-for-cc/blob/main/docs/CODEX_SETUP.md'));
+                        }
+                    } else if (choice === '暂时禁用 Codex') {
+                        vscode.window.showInformationMessage(
+                            '请在 src/features/spec/specManager.ts 的 isCodexAvailable() 方法中返回 false，然后重新编译安装。详见配置指南。'
+                        );
+                    }
+                } else {
+                    throw error;
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Handle generic document analysis command (from command palette)
+ */
+async function handleAnalyzeDocumentCommand(): Promise<void> {
+    // 1. Let user select document type
+    const docType = await vscode.window.showQuickPick(
+        [
+            { label: 'Design Document (design.md)', value: 'design' },
+            { label: 'Requirements Document (requirements.md)', value: 'requirements' },
+            { label: 'Tasks Document (tasks.md)', value: 'tasks' }
+        ],
+        {
+            placeHolder: 'Select the type of document to analyze'
+        }
+    );
+
+    if (!docType) {
+        return; // User cancelled
+    }
+
+    // 2. Call corresponding command based on type
+    switch (docType.value) {
+        case 'design':
+            await vscode.commands.executeCommand('kfc.codex.reviewDesign');
+            break;
+        case 'requirements':
+            await vscode.commands.executeCommand('kfc.codex.reviewRequirements');
+            break;
+        case 'tasks':
+            vscode.window.showInformationMessage('Tasks document analysis feature coming soon');
+            break;
+    }
+}
+
+/**
+ * Extract spec name from file path
+ */
+function _extractSpecName(filePath: string): string {
+    // Assume path format: .../specs/{specName}/design.md
+    const parts = filePath.split(path.sep);
+    const specsIndex = parts.indexOf('specs');
+
+    if (specsIndex >= 0 && specsIndex < parts.length - 1) {
+        return parts[specsIndex + 1];
+    }
+
+    // Fallback: use directory name containing the file
+    return path.basename(path.dirname(filePath));
 }
 
 async function toggleViews() {
@@ -308,6 +652,221 @@ function registerCommands(context: vscode.ExtensionContext, specExplorer: SpecEx
         vscode.commands.registerCommand('kfc.spec.refresh', async () => {
             outputChannel.appendLine('[Manual Refresh] Refreshing spec explorer...');
             specExplorer.refresh();
+        })
+    );
+
+    // Codex commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('kfc.codex.reviewDesign', async (item?: any) => {
+            try {
+                // Handle both TreeItem (from context menu) and Uri (from other sources)
+                let designUri: vscode.Uri | undefined;
+
+                if (item) {
+                    if (item instanceof vscode.Uri) {
+                        designUri = item;
+                    } else if (item.resourceUri) {
+                        // TreeItem with resourceUri
+                        designUri = item.resourceUri;
+                    } else if (item.filePath) {
+                        // Custom TreeItem with filePath
+                        designUri = vscode.Uri.file(item.filePath);
+                    }
+                }
+
+                await handleReviewDesignCommand(designUri);
+            } catch (error) {
+                vscode.window.showErrorMessage(
+                    `Design document analysis failed: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        }),
+
+        vscode.commands.registerCommand('kfc.codex.reviewRequirements', async (item?: any) => {
+            try {
+                // Handle both TreeItem (from context menu) and Uri (from other sources)
+                let reqUri: vscode.Uri | undefined;
+
+                if (item) {
+                    if (item instanceof vscode.Uri) {
+                        reqUri = item;
+                    } else if (item.resourceUri) {
+                        reqUri = item.resourceUri;
+                    } else if (item.filePath) {
+                        reqUri = vscode.Uri.file(item.filePath);
+                    }
+                }
+
+                await handleReviewRequirementsCommand(reqUri);
+            } catch (error) {
+                vscode.window.showErrorMessage(
+                    `Requirements document analysis failed: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        }),
+
+        vscode.commands.registerCommand('kfc.codex.analyzeDocument', async () => {
+            await handleAnalyzeDocumentCommand();
+        }),
+
+        vscode.commands.registerCommand('kfc.codex.viewExecutionLog', async (taskId: string) => {
+            try {
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!workspaceRoot) {
+                    vscode.window.showErrorMessage('No workspace folder found');
+                    return;
+                }
+
+                const logPath = path.join(workspaceRoot, '.claude/codex/execution-history', `${taskId}.log`);
+
+                // 检查文件是否存在
+                if (!fs.existsSync(logPath)) {
+                    vscode.window.showWarningMessage(`Execution log not found for task: ${taskId}`);
+                    return;
+                }
+
+                // 打开日志文件
+                const doc = await vscode.workspace.openTextDocument(logPath);
+                await vscode.window.showTextDocument(doc);
+            } catch (error) {
+                vscode.window.showErrorMessage(
+                    `Failed to view execution log: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        })
+    );
+
+    // Sam commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('kfc.sam.ask', async () => {
+            outputChannel.appendLine('\n=== COMMAND kfc.sam.ask TRIGGERED ===');
+            outputChannel.appendLine(`Time: ${new Date().toLocaleTimeString()}`);
+
+            try {
+                await samManager.askSam();
+            } catch (error) {
+                outputChannel.appendLine(`Error in sam.ask: ${error}`);
+                vscode.window.showErrorMessage(`Failed to start Sam: ${error}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('kfc.sam.continue', async (item: any) => {
+            outputChannel.appendLine('\n=== COMMAND kfc.sam.continue TRIGGERED ===');
+            outputChannel.appendLine(`Time: ${new Date().toLocaleTimeString()}`);
+
+            try {
+                if (item && item.specName) {
+                    await samManager.continueWork(item.specName);
+                } else {
+                    vscode.window.showWarningMessage('No spec selected');
+                }
+            } catch (error) {
+                outputChannel.appendLine(`Error in sam.continue: ${error}`);
+                vscode.window.showErrorMessage(`Failed to continue Sam work: ${error}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('kfc.sam.viewProgress', async (item: any) => {
+            outputChannel.appendLine('\n=== COMMAND kfc.sam.viewProgress TRIGGERED ===');
+
+            try {
+                if (item && item.specName) {
+                    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                    if (workspaceRoot) {
+                        const progressPath = path.join(
+                            workspaceRoot,
+                            '.claude/specs',
+                            item.specName,
+                            'PROGRESS.md'
+                        );
+
+                        if (fs.existsSync(progressPath)) {
+                            const doc = await vscode.workspace.openTextDocument(progressPath);
+                            await vscode.window.showTextDocument(doc);
+                        } else {
+                            vscode.window.showWarningMessage(`No progress file found for ${item.specName}`);
+                        }
+                    }
+                } else {
+                    vscode.window.showWarningMessage('No spec selected');
+                }
+            } catch (error) {
+                outputChannel.appendLine(`Error in sam.viewProgress: ${error}`);
+                vscode.window.showErrorMessage(`Failed to view progress: ${error}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('kfc.sam.implementWithCodex', async () => {
+            outputChannel.appendLine('\n=== COMMAND kfc.sam.implementWithCodex TRIGGERED ===');
+
+            try {
+                // 1. Get spec name from user
+                const specName = await vscode.window.showInputBox({
+                    prompt: 'Enter the spec name',
+                    placeHolder: 'e.g., bubble-sort'
+                });
+
+                if (!specName) {
+                    return;
+                }
+
+                // 2. Get task description from user
+                const taskDescription = await vscode.window.showInputBox({
+                    prompt: 'Describe the task you want Codex to implement',
+                    placeHolder: 'e.g., 实现冒泡排序算法，支持升序和降序',
+                    validateInput: (value) => {
+                        return value.trim() ? null : 'Task description cannot be empty';
+                    }
+                });
+
+                if (!taskDescription) {
+                    return;
+                }
+
+                // 3. Try to load requirements and design for context
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                let taskContext: { requirements?: string; design?: string } | undefined;
+
+                if (workspaceRoot) {
+                    const reqPath = path.join(workspaceRoot, 'docs/specs', specName, 'requirements.md');
+                    const designPath = path.join(workspaceRoot, 'docs/specs', specName, 'design.md');
+
+                    taskContext = {};
+
+                    if (fs.existsSync(reqPath)) {
+                        taskContext.requirements = fs.readFileSync(reqPath, 'utf-8');
+                        outputChannel.appendLine('[Sam] Loaded requirements context');
+                    }
+
+                    if (fs.existsSync(designPath)) {
+                        taskContext.design = fs.readFileSync(designPath, 'utf-8');
+                        outputChannel.appendLine('[Sam] Loaded design context');
+                    }
+                }
+
+                // 4. Execute with Codex
+                outputChannel.appendLine(`[Sam] Delegating task to Codex: ${taskDescription}`);
+
+                const result = await samManager.implementTaskWithCodex(
+                    specName,
+                    taskDescription,
+                    taskContext
+                );
+
+                if (result.success) {
+                    vscode.window.showInformationMessage(
+                        `✅ Task implemented successfully by Codex! Check the output.`
+                    );
+                } else {
+                    vscode.window.showErrorMessage(
+                        `❌ Codex implementation failed: ${result.error}`
+                    );
+                }
+
+            } catch (error) {
+                outputChannel.appendLine(`Error in sam.implementWithCodex: ${error}`);
+                vscode.window.showErrorMessage(`Failed to implement task: ${error}`);
+            }
         })
     );
 
@@ -547,9 +1106,14 @@ function setupFileWatchers(
     context.subscriptions.push(globalClaudeMdWatcher, projectClaudeMdWatcher);
 }
 
-export function deactivate() {
+export async function deactivate() {
     // Cleanup
     if (permissionManager) {
         permissionManager.dispose();
+    }
+
+    // Dispose Codex Orchestrator (cleanup sessions and timers)
+    if (codexOrchestrator) {
+        await codexOrchestrator.dispose();
     }
 }

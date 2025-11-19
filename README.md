@@ -32,12 +32,23 @@ A VSCode extension that brings spec-driven development to Claude Code. Manage yo
 
 ## Features
 
+### 🤖 Sam - AI Project Manager (NEW ✨)
+
+Sam (Spec Automation Manager) automates your entire spec workflow:
+
+- **🚀 One-Click Start**: Click "Ask Sam" button to begin - Sam automatically gathers project context
+- **📊 Visual Progress**: See real-time progress with status icons (🔄 in-progress, ✅ completed, ⚠️ blocked)
+- **🔄 Smart Resume**: Right-click any spec to continue work across sessions
+- **🎯 Auto Context**: Sam reads your language preference, project rules, and existing specs automatically
+
+[Learn more about Sam →](docs/SAM_INTEGRATION.md)
+
 ### 📝 SPEC Management
 
 - **Create Specs**: Generate requirements, design, and task documents with Claude's help
-- **Visual Explorer**: Browse and manage specs in the sidebar
+- **Visual Explorer**: Browse and manage specs in the sidebar with progress indicators
 - **Spec Workflow**: Requirements → Design → Tasks with review at each step
-- **NEW: Sub Agent Support**: Create specs using specialized agents for parallel processing
+- **Sub Agent Support**: Create specs using specialized agents for parallel processing
 
 ### 🤖 AGENT Management
 
@@ -240,9 +251,45 @@ npm run watch
 
 ### Running the Extension
 
+**Method 1: Automated Build & Install (Recommended)**
+
+```bash
+# Auto-detect and install to VSCode/Cursor
+npm run install:local
+
+# Or specify target
+npm run install:vscode   # Install to VSCode only
+npm run install:cursor   # Install to Cursor only
+npm run install:both     # Install to both
+```
+
+**Method 2: Development Mode (F5)**
+
 1. Open the project in VSCode
 2. Press `F5` to launch Extension Development Host
 3. The extension will be available in the new VSCode window
+4. After code changes, press `Cmd+R` / `Ctrl+R` in the Extension Development Host to reload
+
+**Quick Update (Development Mode Only)**
+
+```bash
+npm run quick-update
+# Then press Cmd+R / Ctrl+R in Extension Development Host
+```
+
+For detailed instructions, see [docs/LOCAL_INSTALL.md](docs/LOCAL_INSTALL.md).
+
+### Claude Code Slash Commands
+
+We provide slash commands for common development tasks:
+
+```bash
+/install     # Build and install to VSCode/Cursor
+/build       # Build .vsix package without installing
+/dev         # Start development mode (watch + F5)
+/dev-help    # Show all available commands
+/publish     # Publish new version to marketplace
+```
 
 ### Building
 
